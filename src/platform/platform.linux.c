@@ -2,63 +2,117 @@
 
 #ifdef __linux__
 #include <stdio.h>
-#include <xcb/xcb.h>
+#include <stdlib.h>
+
 
 Result display_init(DisplayInitInfo info, DisplayState* out_state){
-    xcb_screen_t *screen;
-    int screen_num;
 
+    out_state->shouldClose = false;
     out_state->width = info.w;
-    out_state->hright = info.h;
-    out_state->connection = xcb_connect(NULL, &screen_num);
-    if (!out_state->connection) {
-        //messages to be handled in an Error Manager
-        printf("Unable to make an XCB connection\n");
-        return RESULT_CODE_FAILED_TO_MAKE_XCB_CONX;
+    out_state->height = info.h;
+
+    out_state->display = XOpenDisplay(NULL);
+    if(out_state->display == NULL){
+        return RESULT_CODE_FAILED_TO_OPEN_DISPLAY;
     }
 
-    const xcb_setup_t *setup = xcb_get_setup(out_state->connection);
+    int screen = DefaultScreen(out_state->display);
 
-    xcb_screen_iterator_t iter = xcb_setup_roots_iterator (setup);  
+    out_state->window = XCreateWindow(out_state->display, 
+                                    DefaultRootWindow(out_state->display),
+                                    0,0, 
+                                    out_state->width, out_state->height, 0,
+                                    DefaultDepth(out_state->display, screen), 
+                                    InputOutput,
+                                    DefaultVisual(out_state->display, screen), 
+                                    0,
+                                    NULL);
+    
+    i64 event_mask = ExposureMask | KeyPressMask | ButtonPressMask |
+                    ButtonReleaseMask |  PointerMotionMask | KeyReleaseMask |
+                    ResizeRedirectMask; 
+    XSelectInput(out_state->display, out_state->window, event_mask);
 
-    // we want the screen at index screenNum of the iterator
-    for (u32 i = 0; i < screen_num; i++) {
-        xcb_screen_next (&iter);
-    }
+    XMapWindow(out_state->display, out_state->window);
+    XFlush(out_state->display);
 
-    screen = iter.data;
-
-    out_state->x = (screen->width_in_pixels / 2) - (info.w / 2);
-    out_state->y = (screen->height_in_pixels / 2) - (info.h / 2);
+    // Set up handling of window close events
+    out_state->__internal.wmDeleteWindow = XInternAtom(out_state->display, "WM_DELETE_WINDOW", False);
+    XSetWMProtocols(out_state->display, out_state->window, &out_state->__internal.wmDeleteWindow, 1);
 
 
-    out_state->window = xcb_generate_id(out_state->connection);
-    uint32_t value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-    uint32_t value_list[2] = {screen->black_pixel, XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS};
+    // Query the actual position of the window
+    Window root_return, child_return;
+    int root_x, root_y, win_x, win_y;
+    unsigned int mask_return;
+    XQueryPointer(out_state->display, out_state->window, &root_return, &child_return,
+                  &root_x, &root_y, &win_x, &win_y, &mask_return);
 
-    xcb_create_window(out_state->connection, XCB_COPY_FROM_PARENT, out_state->window, screen->root, 0, 0, info.w, info.h, 0,
-                      XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual, value_mask, value_list);
+    // Update the DisplayState with the actual window position
+    out_state->x = win_x;
+    out_state->y = win_y;
 
-    xcb_map_window(out_state->connection, out_state->window);
-    xcb_flush(out_state->connection);
+    // printf("window (x, y) => (%d, %d)\n", win_x, win_y);
+
     return RESULT_CODE_SUCCESS;
 }
 
 Result destroy_display(DisplayState *state){
-    // Unmap and destroy the window
-    xcb_unmap_window(state->connection, state->window);
-    xcb_destroy_window(state->connection, state->window);
+    XUnmapWindow(state->display, state->window);
+    XDestroyWindow(state->display, state->window);
+    XCloseDisplay(state->display);
 
-    // Disconnect from the X server
-    xcb_disconnect(state->connection);
-
-    state->connection = null;
-    state->window = null;
     state->width = 0;
-    state->hright = 0;
+    state->height = 0;
     state->x = 0;
     state->y = 0;
+    return RESULT_CODE_SUCCESS;
+}
 
+
+Result display_PullEvents(DisplayState* state){
+    while(XPending(state->display)){
+        XEvent e; 
+        XNextEvent(state->display, &e);
+        switch (e.type)
+        {
+        case Expose:
+            /* code */
+            break;
+        case KeyPress:
+
+            break;
+        case KeyRelease:
+
+            break;
+        case ButtonPress:
+
+            break;
+        case ButtonRelease:
+
+            break;
+        case MotionNotify:
+
+            break;
+        case ResizeRequest:
+
+            break;
+        case UnmapNotify :
+            break;
+        case ClientMessage:
+            if (e.xclient.message_type == XInternAtom(state->display, "WM_PROTOCOLS", True)) {
+                Atom protocol = (Atom)e.xclient.data.l[0];
+                if (protocol == state->__internal.wmDeleteWindow) {
+                    /* Handle window closing request */
+                    state->shouldClose = true;
+                }
+            }
+            break;
+        default:
+
+            break;
+        }
+    }
     return RESULT_CODE_SUCCESS;
 }
 

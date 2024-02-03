@@ -6,7 +6,7 @@ BUILD_DIR = bin
 OBJ_DIR = obj
 
 INCLUDE_PATH = -Iinclude
-LINKER_FLAGS = -lxcb -lxcb-keysyms
+LINKER_FLAGS = -lX11
 
 SRC :=  $(wildcard  ./src/*.c ./src/**/*.c)
 OBJ := $(patsubst ./src/%.c, $(OBJ_DIR)/%.o, $(SRC))

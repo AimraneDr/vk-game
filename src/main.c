@@ -11,10 +11,10 @@ int main(){
         .w = 700
     };
     display_init(info, &state);
-
-    while (true)
+    while (!state.shouldClose)
     {
-        
+        display_PullEvents(&state);
+
     }
 
     destroy_display(&state);
