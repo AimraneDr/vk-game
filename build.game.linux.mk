@@ -8,17 +8,17 @@ OBJ_DIR = obj
 INCLUDE_PATH = -Iinclude
 LINKER_FLAGS = -lX11
 
-SRC :=  $(wildcard  ./src/*.c ./src/**/*.c)
+SRC :=  $(wildcard $(shell find ./src -name '*.c'))
 OBJ := $(patsubst ./src/%.c, $(OBJ_DIR)/%.o, $(SRC))
 
 all : scaffold $(EXE_NAME)
 
 scaffold :
 	@echo scaffolding ... 
-	mkdir -p $(dir $(OBJ))
+	@mkdir -p $(dir $(OBJ))
 
 $(EXE_NAME): $(OBJ)
-	@echo building game ...
+	@echo building $(EXE_NAME) ...
 	@$(CC) $(CFLAGS) -o $(BUILD_DIR)/$@ $^ $(LINKER_FLAGS)
 	@echo done.
 
