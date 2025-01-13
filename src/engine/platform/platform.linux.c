@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 
-Result display_init(PlatformInitConfig info, PlatformState* out){
+Result window_init(PlatformInitConfig info, PlatformState* out){
 
     out->display.shouldClose = false;
     out->display.width = info.display.w;
@@ -13,7 +13,7 @@ Result display_init(PlatformInitConfig info, PlatformState* out){
 
     out->display.display = XOpenDisplay(NULL);
     if(out->display.display == NULL){
-        return RESULT_CODE_FAILED_TO_OPEN_DISPLAY;
+        return RESULT_CODE_FAILED_DISPLAY_OPENING;
     }
 
     int screen = DefaultScreen(out->display.display);
@@ -57,7 +57,7 @@ Result display_init(PlatformInitConfig info, PlatformState* out){
     return RESULT_CODE_SUCCESS;
 }
 
-Result destroy_display(PlatformState *state){
+Result window_destroy(PlatformState *state){
     XUnmapWindow(state->display.display, state->display.window);
     XDestroyWindow(state->display.display, state->display.window);
     XCloseDisplay(state->display.display);
@@ -70,7 +70,7 @@ Result destroy_display(PlatformState *state){
 }
 
 
-Result display_PullEvents(PlatformState* state){
+Result window_PullEvents(PlatformState* state){
     while(XPending(state->display.display)){
         XEvent e; 
         XNextEvent(state->display.display, &e);

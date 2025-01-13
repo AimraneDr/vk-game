@@ -1,9 +1,17 @@
 #ifndef PLATFORM_TYPES_H
 #define PLATFORM_TYPES_H
 
+#include "engine/data_types.h"
+
 #ifdef __linux__
 
 #include <X11/Xlib.h>
+
+#endif
+
+#ifdef _WIN32
+
+#include <windows.h>
 
 #endif
 
@@ -26,15 +34,16 @@ typedef struct PlatformState{
         u32 width, height;
 
         bool shouldClose;
-        enum State{
+        enum WindowState{
             Maximized,
             Minimized,
             Normal
         } visibility;
 
 
-        #ifdef WIN32
-        //windows types
+        #ifdef _WIN32
+        HWND hwnd;
+        HINSTANCE hInstance;
         #endif
         #ifdef __linux__
         Display* display;

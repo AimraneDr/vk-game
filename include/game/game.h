@@ -1,8 +1,9 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include "game_types.h"
+#include "engine/data_types.h"
 #include "engine/platform/platform_types.h"
+#include "engine/renderer/render_types.h"
 
 typedef struct GameInitConfig{
     struct{
@@ -16,6 +17,7 @@ typedef struct GameInitConfig{
 typedef struct GameState{
     char* name;
     PlatformState platform;
+    Renderer renderer;
 }GameState;
 /**
  * @brief initialize all sub-systems needed by the game

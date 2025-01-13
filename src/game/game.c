@@ -1,6 +1,7 @@
 #include "game/game.h"
 
 #include "engine/platform/platform.h"
+#include "engine/renderer/renderer.h"
 
 Result game_init(GameInitConfig config, GameState* out){
     // init platform
@@ -10,22 +11,28 @@ Result game_init(GameInitConfig config, GameState* out){
             .h = config.display.height
         }
     };
-    display_init(info, &out->platform);
+
+
+    window_init(info, &out->platform);
+    renderer_init(&out->renderer, &out->platform);
 
     return RESULT_CODE_SUCCESS;
 }
+
 Result game_run(GameState* gState){
 
     while (!gState->platform.display.shouldClose)
     {
-        display_PullEvents(&gState->platform);
+        window_PullEvents(&gState->platform);
 
     }
     return RESULT_CODE_SUCCESS;
 }
+
 Result game_shutdown(GameState* gState){
 
-    destroy_display(&gState->platform);
+    renderer_shutdown(&gState->renderer);
+    window_destroy(&gState->platform);
 
     return RESULT_CODE_SUCCESS;
 }
