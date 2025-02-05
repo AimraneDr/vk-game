@@ -8,6 +8,7 @@
 Result window_init(PlatformInitConfig info, PlatformState* out){
 
     out->display.shouldClose = false;
+    out->display.isResizing = false;
     out->display.width = info.display.w;
     out->display.height = info.display.h;
 
@@ -70,7 +71,7 @@ Result window_destroy(PlatformState *state){
 }
 
 
-Result window_PullEvents(PlatformState* state){
+void window_PullEvents(PlatformState* state){
     while(XPending(state->display.display)){
         XEvent e; 
         XNextEvent(state->display.display, &e);
@@ -113,7 +114,7 @@ Result window_PullEvents(PlatformState* state){
             break;
         }
     }
-    return RESULT_CODE_SUCCESS;
+    return;
 }
 
 #endif

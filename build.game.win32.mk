@@ -6,7 +6,7 @@ BUILD_DIR = bin
 OBJ_DIR = obj
 
 DEFINES = -D_DEBUG
-INCLUDE_PATH = -Iinclude -IC:/Users/aimra/Dev/c-projects/c-toolbox/include -IC:\VulkanSDK\1.3.290.0\Include
+INCLUDE_PATH = -Iinclude -IC:/Users/aimra/Dev/c-toolbox/include -IC:\VulkanSDK\1.3.290.0\Include -IC:/Users/aimra/Dev/libs
 LINKER_FLAGS = -lvulkan-1 -ltoolbox -LC:/Users/aimra/Dev/libs/ -luser32 -lgdi32
 
 SRC := $(shell dir /b /s src\*.c )

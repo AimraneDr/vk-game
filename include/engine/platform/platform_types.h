@@ -28,18 +28,21 @@ typedef struct DisplayProps{
 }DisplayProps;
 #endif
 
+typedef enum WindowState{
+    Maximized,
+    Minimized,
+    Floating
+}WindowState;
+
 typedef struct PlatformState{
-    struct {
+    struct Window{
         u32 x,y;
         u32 width, height;
 
         bool shouldClose;
-        enum WindowState{
-            Maximized,
-            Minimized,
-            Normal
-        } visibility;
+        WindowState visibility;
 
+        bool isResizing;
 
         #ifdef _WIN32
         HWND hwnd;

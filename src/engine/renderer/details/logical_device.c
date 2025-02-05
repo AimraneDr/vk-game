@@ -1,4 +1,4 @@
-#include "engine/renderer/logical_device.h"
+#include "engine/renderer/details/logical_device.h"
 
 #include "engine/renderer/details/queue.h"
 #include "engine/renderer/details/details.h"
@@ -21,7 +21,9 @@ Result createLogicalDevice(const VkPhysicalDevice device, const VkSurfaceKHR sur
         queueCreateInfos[i] = queueCreateInfo;
     }
 
-    VkPhysicalDeviceFeatures enabledFeatures = {};
+    VkPhysicalDeviceFeatures enabledFeatures = {
+        .samplerAnisotropy = VK_TRUE
+    };
 
     VkDeviceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,

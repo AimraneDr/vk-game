@@ -5,6 +5,7 @@
 #include "render_types.h"
 
 Result renderer_init(Renderer* r, PlatformState* p);
+void renderer_draw(Renderer* r, PlatformState* p, f64 deltatime);
 Result renderer_shutdown(Renderer* r);
 
 

@@ -5,7 +5,7 @@
 #include "game/game.h"
 
 int main(){
-    GameState gState;
+    GameState gState = {0};
     GameInitConfig gConfig = {
         .display = {
             .height = 500,
@@ -20,6 +20,7 @@ int main(){
     game_run(&gState);
 
     game_shutdown(&gState);
+
 
     return 0;
 }

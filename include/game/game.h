@@ -4,6 +4,8 @@
 #include "engine/data_types.h"
 #include "engine/platform/platform_types.h"
 #include "engine/renderer/render_types.h"
+#include "engine/core/input.h"
+#include "engine/core/clock.h"
 
 typedef struct GameInitConfig{
     struct{
@@ -17,7 +19,10 @@ typedef struct GameInitConfig{
 typedef struct GameState{
     char* name;
     PlatformState platform;
+    InputManager inputer;
     Renderer renderer;
+
+    Clock clock;
 }GameState;
 /**
  * @brief initialize all sub-systems needed by the game

@@ -12,7 +12,10 @@
 
 #include <vulkan/vulkan.h>
 #include "engine/data_types.h"
+#include <math/mathTypes.h>
 
+
+#define MAX_FRAMES_IN_FLIGHT 2
 
 typedef struct Renderer{
     VkInstance instance;
@@ -25,9 +28,49 @@ typedef struct Renderer{
 
     VkSwapchainKHR swapchain;
     VkImage* swapchainImages;
+    u32 swapchainImagesCount;
     VkFormat swapchainImageFormat;
     VkExtent2D swapchainExtent;
+    VkImageView* swapchainImageViews;
 
+    VkRenderPass renderPass;
+    VkDescriptorSetLayout descriptorSetLayout;
+    VkDescriptorPool descriptorPool;
+    VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
+    VkPipelineLayout pipelineLayout;
+    VkPipeline graphicsPipeline;
+
+    VkFramebuffer* shwapchainFrameBuffers;
+    VkCommandPool commandPool;
+    VkCommandBuffer commandBuffers[MAX_FRAMES_IN_FLIGHT];
+
+    VkBuffer vertexBuffer;
+    VkDeviceMemory vertexBufferMemory;
+
+    VkBuffer indexBuffer;
+    VkDeviceMemory indexBufferMemory;
+
+    VkImage depthImage;
+    VkDeviceMemory depthImageMemory;
+    VkImageView depthImageView;
+
+    VkImage textureImage;
+    VkDeviceMemory textureImageMemory;
+    VkImageView textureImageView;
+    VkSampler textureSampler;
+
+
+    VkBuffer uniformBuffers[MAX_FRAMES_IN_FLIGHT];
+    VkDeviceMemory uniformBuffersMemory[MAX_FRAMES_IN_FLIGHT];
+    void* uniformBuffersMapped[MAX_FRAMES_IN_FLIGHT];
+
+    //  sync
+    VkSemaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT];
+    VkSemaphore renderFinishedSemaphores[MAX_FRAMES_IN_FLIGHT];
+    VkFence inFlightFences[MAX_FRAMES_IN_FLIGHT];
+
+    u8 currentFrame;
+    bool framebufferResized;
 }Renderer;
 
 typedef struct QueueFamilyIndices{
@@ -45,5 +88,11 @@ typedef struct SwapChainSupportDetails{
     u32 presentModesCount;
     VkPresentModeKHR* presentModes;
 }SwapChainSupportDetails;
+
+typedef struct UniformBufferObject {
+    Mat4 model;
+    Mat4 view;
+    Mat4 proj;
+}UniformBufferObject;
 
 #endif //RENDER_TYPES_H
