@@ -10,6 +10,7 @@
 
 
 
+
 void createUniformBuffer(VkPhysicalDevice gpu, VkDevice device, VkBuffer* uniformBuffers, VkDeviceMemory* buffersMems, void** mappedBuffs){
     VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
@@ -35,27 +36,33 @@ void destroyUniformBuffer(VkDevice device, VkBuffer uniformBuffers[], VkDeviceMe
     }
 }
 
-void updateUniformBuffer(uint32_t currentImage, Vec2 frameSize, void** uniformBuffersMapped, f64 deltatime) {
+void updateUniformBuffer(uint32_t currentImage, Vec2 frameSize, void** uniformBuffersMapped, f64 deltatime, Camera_Component* camera) {
     static Vec3 cameraPos = (Vec3){1,2,2};
     // cameraPos.z += time* 0.01;
-    
+    static f32 turnSpeed = 1.f;
+    // camera->transform.rotation.x-=deltatime*turnSpeed;
+
+    camera_updateViewMat(camera);
+    camera_updateProjectionMat(camera);
+
     UniformBufferObject ubo;
     static float angle = 0;
     angle += deltatime * deg_to_rad(90.0f);
     ubo.model = MAT4_IDENTITY;
-    ubo.model = mat4_rotate(angle, (Vec3){0.0f, 1.0f, .0f});
-    ubo.view = mat4_lookAt(
-        cameraPos,  // eye
-        VEC3_ZERO,  //target
-        VEC3_UP   // up
-    );
-    // ubo.view = MAT4_IDENTITY;
-    ubo.proj = mat4_perspective(
-        deg_to_rad(45.0f),       // 45 degrees in radians
-        frameSize.x / frameSize.y,
-        0.01f,
-        100.0f
-    );
+    // ubo.model = mat4_rotate(angle, (Vec3){.0f, .0f, 1.0f});
+    // ubo.view = mat4_lookAt(
+    //     cameraPos,  // eye
+    //     VEC3_ZERO,  //target
+    //     VEC3_UP   // up
+    // );
+    // ubo.proj = mat4_perspective(
+    //     deg_to_rad(45.0f),       // 45 degrees in radians
+    //     frameSize.x / frameSize.y,
+    //     0.01f,
+    //     100.0f
+    // );
+    ubo.view = camera->view;
+    ubo.proj = camera->projection;
 
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }

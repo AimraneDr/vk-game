@@ -7,7 +7,7 @@ OBJ_DIR = obj
 
 DEFINES = -D_DEBUG
 INCLUDE_PATH = -Iinclude -I../engine/include -IC:/Users/aimra/Dev/c-toolbox/include -IC:\VulkanSDK\1.3.290.0\Include -IC:/Users/aimra/Dev/libs
-LINKER_FLAGS = -L"C:/Users/aimra/Dev/libs" -lengine
+LINKER_FLAGS = -L"C:/Users/aimra/Dev/libs" -lengine -ltoolbox
 
 SRC := $(shell dir /b /s src\*.c)
 SRC := $(subst \,/,$(SRC))

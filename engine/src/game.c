@@ -14,7 +14,7 @@ void on_window_resized(EventType eType, void* sender, void* listener, EventConte
 }
 
 EventListener onWinResizeListener = {
-    .callback = on_window_resized
+    .callback = on_window_resized,
 };
 
 Result game_init(GameInitConfig config, GameState* out){
@@ -26,13 +26,27 @@ Result game_init(GameInitConfig config, GameState* out){
         }
     };
 
+    out->camera.transform.position = (Vec3){
+        .x = config.camera.pos.x,
+        .y = config.camera.pos.y,
+        .z = config.camera.pos.z,
+    };
+    out->camera.transform.rotation = (Vec3){
+        .x = config.camera.rot.x,
+        .y = config.camera.rot.y,
+        .z = config.camera.rot.z,
+    };
+    out->camera.transform.scale = (Vec3){config.display.width, config.display.height, 0.f};
+    out->camera.farPlane = config.camera.farPlane;
+    out->camera.nearPlane = config.camera.nearPlane;
+    out->camera.fiealdOfView = config.camera.fiealdOfView;
+
     clock_start(&out->clock);
     init_event_sys();
 
     window_init(info, &out->platform);
     input_system_init(&out->inputer);
     renderer_init(&out->renderer, &out->platform);
-
 
     subscribe_to_event(EVENT_TYPE_WINDOW_RESIZING, &onWinResizeListener);
 
@@ -48,7 +62,7 @@ Result game_run(GameState* gState){
         clock_tick(&gState->clock);
 
         input_system_update(&gState->inputer);
-        renderer_draw(&gState->renderer, &gState->platform, gState->clock.deltaTime);
+        renderer_draw(&gState->camera, &gState->renderer, &gState->platform, gState->clock.deltaTime);
         window_PullEvents(&gState->platform);
 
         if(totalF > 0){

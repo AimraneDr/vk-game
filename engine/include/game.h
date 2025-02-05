@@ -7,6 +7,8 @@
 #include "renderer/render_types.h"
 #include "core/input.h"
 #include "core/clock.h"
+#include "components/cameraComponent.h"
+
 
 typedef struct GameInitConfig{
     struct{
@@ -15,6 +17,13 @@ typedef struct GameInitConfig{
         bool resizable;
         bool MaximizeAtStart;
     }display;
+    struct {
+        Vec3 pos,rot;
+        f32 fiealdOfView;
+        f32 farPlane;
+        f32 nearPlane;
+    }camera;
+    
 }GameInitConfig;
 
 typedef struct GameState{
@@ -24,6 +33,9 @@ typedef struct GameState{
     Renderer renderer;
 
     Clock clock;
+
+    //components
+    Camera_Component camera;
 }GameState;
 /**
  * @brief initialize all sub-systems needed by the game

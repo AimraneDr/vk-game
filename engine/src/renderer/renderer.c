@@ -45,23 +45,22 @@ void onWindowResize(EventType eType, void *sender, void *listener, EventContext 
 
 u32 verticesCount = 8;
 Vertex vertices[] = {
-    //pos                //norm     //color         //texCoord
-    {{-0.5f, 0.f, -0.5f}, {0}, {1.0f, .0f, .0f, 1.0f}, {1.f, 0.f}}, //left bottom
-    {{0.5f, 0.f, -0.5f}, {0}, {0.f, 0.f, 1.0f, 1.f}, {0.f, 0.f}}, //right bottom
-    {{0.5f, 0.f, 0.5f}, {0}, {0.f, 0.f, 1.f, 1.f}, {0.f, 1.f}}, //right top
-    {{-0.5f, 0.f, 0.5f}, {0}, {1.0f, 0.f, 0.f, 1.f}, {1.f, 1.f}}, //left top
+    // pos                //norm     //color         //texCoord
+    {{-0.5f, -0.5f, 0.f}, {0}, {1.0f, .0f, .0f, 1.0f}, {1.f, 0.f}}, // left bottom
+    {{0.5f, -0.5f, 0.f}, {0}, {0.f, 0.f, 1.0f, 1.f}, {0.f, 0.f}},   // right bottom
+    {{0.5f, 0.5f, 0.f}, {0}, {0.f, 0.f, 1.f, 1.f}, {0.f, 1.f}},     // right top
+    {{-0.5f, 0.5f, 0.f}, {0}, {1.0f, 0.f, 0.f, 1.f}, {1.f, 1.f}},   // left top
 
-    {{-0.5f, 0.5f, -0.5f}, {0}, {1.0f, .0f, .0f, 1.0f}, {1.f, 0.f}}, //left bottom
-    {{0.5f, 0.5f, -0.5f}, {0}, {0.f, 0.f, 1.0f, 1.f}, {0.f, 0.f}}, //right bottom
-    {{0.5f, 0.5f, 0.5f}, {0}, {0.f, 0.f, 1.f, 1.f}, {0.f, 1.f}}, //right top
-    {{-0.5f, 0.5f, 0.5f}, {0}, {1.0f, 0.f, 0.f, 1.f}, {1.f, 1.f}} //left top
+    {{-0.5f, -0.5f, 0.5f}, {0}, {1.0f, .0f, .0f, 1.0f}, {1.f, 0.f}}, // left bottom
+    {{0.5f, -0.5f, 0.5f}, {0}, {0.f, 0.f, 1.0f, 1.f}, {0.f, 0.f}},   // right bottom
+    {{0.5f, 0.5f, 0.5f}, {0}, {0.f, 0.f, 1.f, 1.f}, {0.f, 1.f}},     // right top
+    {{-0.5f, 0.5f, 0.5f}, {0}, {1.0f, 0.f, 0.f, 1.f}, {1.f, 1.f}}    // left top
 };
 
 u32 indicesCount = 12;
 u16 indices[] = {
     4, 5, 6, 6, 7, 4,
-    0, 1, 2, 2, 3, 0
-};
+    0, 1, 2, 2, 3, 0};
 
 Result renderer_init(Renderer *r, PlatformState *p)
 {
@@ -101,8 +100,8 @@ Result renderer_init(Renderer *r, PlatformState *p)
 
     createVertexBuffer(r->physicalDevice, r->logicalDevice, r->graphicsQueue, r->commandPool, verticesCount, vertices, &r->vertexBuffer, &r->vertexBufferMemory);
     createIndexBuffer(r->physicalDevice, r->logicalDevice, r->graphicsQueue, r->commandPool, indicesCount, indices, &r->indexBuffer, &r->indexBufferMemory);
-    createUniformBuffer(r->physicalDevice,r->logicalDevice, r->uniformBuffers, r->uniformBuffersMemory, r->uniformBuffersMapped);
-    
+    createUniformBuffer(r->physicalDevice, r->logicalDevice, r->uniformBuffers, r->uniformBuffersMemory, r->uniformBuffersMapped);
+
     createDescriptorPool(r->logicalDevice, &r->descriptorPool);
     createDescriptorSets(r->logicalDevice, r->descriptorSetLayout, r->descriptorPool, r->uniformBuffers, r->textureImageView, r->textureSampler, r->descriptorSets);
 
@@ -137,7 +136,7 @@ Result renderer_shutdown(Renderer *r)
 
     destroyDescriptorPool(r->logicalDevice, r->descriptorPool);
     destroyDescriptorSetLayout(r->logicalDevice, r->descriptorSetLayout);
-    
+
     destroyRenderPass(r->logicalDevice, r->renderPass);
     destroySwapChainImageViews(r->logicalDevice, r->swapchainImageViews, r->swapchainImagesCount);
     destroySwapChain(r->logicalDevice, r->swapchain);
@@ -148,7 +147,7 @@ Result renderer_shutdown(Renderer *r)
     return RESULT_CODE_SUCCESS;
 };
 
-void renderer_draw(Renderer *r, PlatformState *p, f64 deltatime)
+void renderer_draw(Camera_Component *camera, Renderer *r, PlatformState *p, f64 deltatime)
 {
     vkWaitForFences(r->logicalDevice, 1, &r->inFlightFences[r->currentFrame], VK_TRUE, UINT64_MAX);
 
@@ -167,8 +166,7 @@ void renderer_draw(Renderer *r, PlatformState *p, f64 deltatime)
     vkResetFences(r->logicalDevice, 1, &r->inFlightFences[r->currentFrame]);
     vkResetCommandBuffer(r->commandBuffers[r->currentFrame], 0);
 
-
-    updateUniformBuffer(r->currentFrame, (Vec2){p->display.width,p->display.height}, r->uniformBuffersMapped, deltatime);
+    updateUniformBuffer(r->currentFrame, (Vec2){p->display.width, p->display.height}, r->uniformBuffersMapped, deltatime, camera);
     recordCommandBuffer(r->commandBuffers[r->currentFrame], r->graphicsPipeline, r->pipelineLayout, r->renderPass, r->shwapchainFrameBuffers, r->swapchainExtent, imageIndex, r->vertexBuffer, r->indexBuffer, indicesCount, &r->descriptorSets[r->currentFrame]);
 
     VkSemaphore waitSemaphores[] = {r->imageAvailableSemaphores[r->currentFrame]};
@@ -206,6 +204,9 @@ void renderer_draw(Renderer *r, PlatformState *p, f64 deltatime)
     if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || r->framebufferResized)
     {
         r->framebufferResized = false;
+        // TODO : move to camera_component
+        camera->transform.scale.x = p->display.width;
+        camera->transform.scale.y = p->display.height;
         recreateSwapChainObject(r, p->display.width, p->display.height, p->display.visibility);
     }
     else if (res != VK_SUCCESS)
