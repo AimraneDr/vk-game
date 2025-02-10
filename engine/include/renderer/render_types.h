@@ -54,11 +54,17 @@ typedef struct Renderer{
     VkDeviceMemory depthImageMemory;
     VkImageView depthImageView;
 
+    u16 mipLevels;
     VkImage textureImage;
     VkDeviceMemory textureImageMemory;
     VkImageView textureImageView;
     VkSampler textureSampler;
 
+    VkSampleCountFlagBits msaaSamples;
+
+    VkImage colorImage;
+    VkDeviceMemory colorImageMemory;
+    VkImageView colorImageView;
 
     VkBuffer uniformBuffers[MAX_FRAMES_IN_FLIGHT];
     VkDeviceMemory uniformBuffersMemory[MAX_FRAMES_IN_FLIGHT];

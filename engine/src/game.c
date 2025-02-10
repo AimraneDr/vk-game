@@ -6,24 +6,26 @@
 #include "core/files.h"
 #include "core/events.h"
 #include "core/input.h"
+#include "assets/asset_manager.h"
 #include <math/mathTypes.h>
 
-void on_window_resized(EventType eType, void* sender, void* listener, EventContext eContext){
-    EventContextWindowResize context =  CAST_EVENT_CONTEXT(eContext, EventContextWindowResize);
-    LOG_INFO("Window resized to %d x %d", context.width, context.height);
-}
+#include <math/vec3.h>
 
-EventListener onWinResizeListener = {
-    .callback = on_window_resized,
-};
 
-Result game_init(GameInitConfig config, GameState* out){
+void game_shutdown(GameState* state);
+void GameInitConfigSetDefaults(GameConfig* config);
+
+
+
+void game_init(GameConfig config, GameState* out){
     // init platform
+    out->name = str_new(config.display.title.val);
     PlatformInitConfig info = {
         .display = {
             .w = config.display.width,
             .h = config.display.height
-        }
+        },
+        .title = out->name
     };
 
     out->camera.transform.position = (Vec3){
@@ -36,52 +38,116 @@ Result game_init(GameInitConfig config, GameState* out){
         .y = config.camera.rot.y,
         .z = config.camera.rot.z,
     };
-    out->camera.transform.scale = (Vec3){config.display.width, config.display.height, 0.f};
+    out->camera.transform.scale = (Vec3){
+        .x = config.camera.scale.x,
+        .y = config.camera.scale.y,
+        .z = config.camera.scale.z,
+    };
     out->camera.farPlane = config.camera.farPlane;
     out->camera.nearPlane = config.camera.nearPlane;
-    out->camera.fiealdOfView = config.camera.fiealdOfView;
+    out->camera.fieldOfView = config.camera.fieldOfView;
+    out->camera.orthographicSize = config.camera.orthographicSize;
+    out->camera.useOrthographic = config.camera.useOrthographic;
 
     clock_start(&out->clock);
     init_event_sys();
 
     window_init(info, &out->platform);
     input_system_init(&out->inputer);
-    renderer_init(&out->renderer, &out->platform);
+    asset_manager_init(&out->assetManager);
 
-    subscribe_to_event(EVENT_TYPE_WINDOW_RESIZING, &onWinResizeListener);
+    load_asset(&out->assetManager, "./../resources/models/viking_room.obj");
+    renderer_init(&out->renderer, &out->platform, &out->assetManager);
 
-    return RESULT_CODE_SUCCESS;
+    return;
 }
 
-Result game_run(GameState* gState){
-    f64 low = 1000.f, high =0;
-    f64 avg=0;
-    u32 totalF=0;
-    while (!gState->platform.display.shouldClose)
+void game_run(GameInterface Interface){
+    GameState state = {0};
+    GameConfig gConfig = {0};
+
+    if(Interface.config) Interface.config(&gConfig);
+    
+    GameInitConfigSetDefaults(&gConfig);
+    
+    game_init(gConfig, &state);
+
+    //user specific startup
+    if(Interface.start) Interface.start(&state);
+
+    while (!state.platform.display.shouldClose)
     {
-        clock_tick(&gState->clock);
+        clock_tick(&state.clock);
 
-        input_system_update(&gState->inputer);
-        renderer_draw(&gState->camera, &gState->renderer, &gState->platform, gState->clock.deltaTime);
-        window_PullEvents(&gState->platform);
+        input_system_update(&state.inputer, state.clock.deltaTime);
+        renderer_draw(&state.camera, &state.renderer, &state.platform, &state.assetManager, state.clock.deltaTime);
+        window_PullEvents(&state.platform);
 
-        if(totalF > 0){
-            if(low > gState->clock.deltaTime) low = gState->clock.deltaTime;
-            if(high < gState->clock.deltaTime) high = gState->clock.deltaTime;
-            avg+=gState->clock.deltaTime;
-        }
-        totalF++;
+        if(Interface.update) Interface.update(&state);
     }
 
-    LOG_DEBUG("Avg [%.2f fps] | low [%.2f fps] | high [%.2f fps]", 1/(avg/totalF), 1/high, 1/low);
-    return RESULT_CODE_SUCCESS;
+    if(Interface.cleanup) Interface.cleanup(&state);
+    
+    game_shutdown(&state);
+    return;
 }
 
-Result game_shutdown(GameState* gState){
+void game_shutdown(GameState* state){
 
-    renderer_shutdown(&gState->renderer);
-    window_destroy(&gState->platform);
+    asset_manager_shutdown(&state->assetManager);
+    renderer_shutdown(&state->renderer);
+    window_destroy(&state->platform);
 
     shutdown_event_sys();
-    return RESULT_CODE_SUCCESS;
+    return;
+}
+
+
+void GameInitConfigSetDefaults(GameConfig* config) {
+    GameConfig base = {
+        .display = {
+            .height = 500,
+            .width = 750,
+            .MaximizeAtStart = false,
+            .resizable = true,
+            .title = str_new("game")
+        },
+        .camera = {
+            .farPlane = 100.f,
+            .nearPlane = 0.01f,
+            .fieldOfView = 45.f,
+            .orthographicSize = 1.f,
+            .pos = vec3_new(0.f,1.f,0.f),
+            .rot = vec3_new(0.f,0.f,0.f),
+            .scale = vec3_new(1.f,1.f,1.f)
+        }
+    };
+    // Set display defaults
+    if (config->display.title.len == 0) {
+        config->display.title = str_new(base.display.title.val);
+    }
+    if (config->display.width == 0) {
+        config->display.width = base.display.width;
+    }
+    if (config->display.height == 0) {
+        config->display.height = base.display.height;
+    }
+    if (config->camera.pos.x == 0.0f && config->camera.pos.y == 0.0f && config->camera.pos.z == 0.0f) {
+        config->camera.pos = (Vec3){base.camera.pos.x, base.camera.pos.y, base.camera.pos.z};
+    }
+    if (config->camera.scale.x == 0.0f && config->camera.scale.y == 0.0f && config->camera.scale.z == 0.0f) {
+        config->camera.scale = (Vec3){base.camera.scale.x, base.camera.scale.y, base.camera.scale.z};
+    }
+    if (config->camera.orthographicSize == 0.0f) {
+        config->camera.orthographicSize = base.camera.orthographicSize;
+    }
+    if (config->camera.fieldOfView == 0.0f) {
+        config->camera.fieldOfView = base.camera.fieldOfView;
+    }
+    if (config->camera.farPlane == 0.0f) {
+        config->camera.farPlane = base.camera.farPlane;
+    }
+    if (config->camera.nearPlane == 0.0f) {
+        config->camera.nearPlane = base.camera.nearPlane;
+    }
 }

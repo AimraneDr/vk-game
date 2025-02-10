@@ -9,7 +9,7 @@ bool hasStencilComponent(VkFormat format);
 
 void createImage(
     VkPhysicalDevice gpu, VkDevice device,
-    u32 width, u32 height, 
+    u32 width, u32 height, u16 mipLevels, VkSampleCountFlagBits numSamples,
     VkFormat format, VkImageTiling tiling, 
     VkImageUsageFlags usage, 
     VkMemoryPropertyFlags properties,
@@ -21,14 +21,14 @@ void createImage(
         .extent.width = width,
         .extent.height = height,
         .extent.depth = 1,
-        .mipLevels = 1,
+        .mipLevels = mipLevels,
         .arrayLayers = 1,
         .format = format,
         .tiling = tiling,
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
         .usage = usage,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .samples = numSamples,
         .flags= 0
     };
 
@@ -59,7 +59,7 @@ void destroyImage(VkDevice device, VkImage image, VkDeviceMemory imageMemory){
     vkFreeMemory(device, imageMemory, 0);
 }
 
-void transitionImageLayout(VkDevice device, VkCommandPool cmdPool, VkQueue queue, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
+void transitionImageLayout(VkDevice device, VkCommandPool cmdPool, VkQueue queue, u16 mipLevels, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands(device, cmdPool);
 
     VkImageMemoryBarrier barrier = {
@@ -71,7 +71,7 @@ void transitionImageLayout(VkDevice device, VkCommandPool cmdPool, VkQueue queue
         .image = image,
         .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
         .subresourceRange.baseMipLevel = 0,
-        .subresourceRange.levelCount = 1,
+        .subresourceRange.levelCount = mipLevels,
         .subresourceRange.baseArrayLayer = 0,
         .subresourceRange.layerCount = 1,
         .srcAccessMask = 0, 

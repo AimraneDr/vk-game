@@ -5,7 +5,13 @@
 #include "core/files.h"
 #include "renderer/vertex.h"
 
-void createPipeline(VkDevice device, const char* vertshadername, const char* fragshadername, VkExtent2D extent, VkRenderPass renderpass, VkDescriptorSetLayout descriptorSetLayout, VkPipelineLayout* out_layout, VkPipeline* out_pipeline){
+void createPipeline(
+    VkDevice device, 
+    const char* vertshadername, const char* fragshadername, 
+    VkExtent2D extent, VkSampleCountFlagBits msaaSamples, 
+    VkRenderPass renderpass, VkDescriptorSetLayout descriptorSetLayout, 
+    VkPipelineLayout* out_layout, VkPipeline* out_pipeline)
+{
     File* vertCode = readFile(vertshadername);
     File* fragCode = readFile(fragshadername);
     VkShaderModule vertShaderModule = createShaderModule(device, vertCode);
@@ -81,8 +87,8 @@ void createPipeline(VkDevice device, const char* vertshadername, const char* fra
         .rasterizerDiscardEnable = VK_FALSE,
         .polygonMode = VK_POLYGON_MODE_FILL,
         .lineWidth = 1.0f,
-        .cullMode = VK_CULL_MODE_BACK_BIT,
-        .frontFace = VK_FRONT_FACE_CLOCKWISE,
+        .cullMode = VK_CULL_MODE_NONE,
+        .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
         .depthBiasEnable = VK_FALSE,
         .depthBiasConstantFactor = 0.0f, // Optional
         .depthBiasClamp = 0.0f, // Optional
@@ -91,9 +97,9 @@ void createPipeline(VkDevice device, const char* vertshadername, const char* fra
 
     VkPipelineMultisampleStateCreateInfo multisampling = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-        .sampleShadingEnable = VK_FALSE,
-        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-        .minSampleShading = 1.0f, // Optional
+        .sampleShadingEnable = VK_TRUE,
+        .rasterizationSamples = msaaSamples,
+        .minSampleShading = .2f, // Optional
         .pSampleMask = 0, // Optional
         .alphaToCoverageEnable = VK_FALSE, // Optional
         .alphaToOneEnable = VK_FALSE // Optional

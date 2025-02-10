@@ -6,6 +6,8 @@
 #include "core/events.h"
 #include "core/input.h"
 
+#include <string/str.h>
+
 Key map_windows_keycode(u8 vk_code);
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -82,12 +84,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         // Mouse Buttons
         case WM_LBUTTONDOWN:
         case WM_RBUTTONDOWN:
-        case WM_MBUTTONDOWN: {
-                Key button = KEY_NULL;
+        case WM_MBUTTONDOWN: 
+        case WM_XBUTTONDOWN: {
+            Key button = KEY_NULL;
                 switch (uMsg) {
                     case WM_LBUTTONDOWN: button = MOUSE_BUTTON_LEFT; break; // Left
                     case WM_RBUTTONDOWN: button = MOUSE_BUTTON_RIGHT; break; // Right
                     case WM_MBUTTONDOWN: button = MOUSE_BUTTON_MIDDLE; break; // Middle
+                    case WM_XBUTTONDOWN:
+                        button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? MOUSE_BUTTON_0 : MOUSE_BUTTON_1;
+                        break;
                 }
                 EventContext context = {
                     .u8[0] = (u8)button,
@@ -97,12 +103,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             break;
         case WM_LBUTTONUP:
         case WM_RBUTTONUP:
-        case WM_MBUTTONUP: {
+        case WM_MBUTTONUP:
+        case WM_XBUTTONUP: {
                 Key button = KEY_NULL;
                 switch (uMsg) {
                     case WM_LBUTTONUP: button = MOUSE_BUTTON_LEFT; break; // Left
                     case WM_RBUTTONUP: button = MOUSE_BUTTON_RIGHT; break; // Right
                     case WM_MBUTTONUP: button = MOUSE_BUTTON_MIDDLE; break; // Middle
+                    case WM_XBUTTONUP:
+                        button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? MOUSE_BUTTON_0 : MOUSE_BUTTON_1;
+                        break;
                 }
                 EventContext context = {
                     .u8[0] = (u8)button,
@@ -123,11 +133,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-Result window_init(PlatformInitConfig info, PlatformState* out) {
+void window_init(PlatformInitConfig info, PlatformState* out) {
     out->display.shouldClose = false;
     out->display.isResizing = false;
     out->display.width = info.display.w;
     out->display.height = info.display.h;
+    out->display.title = str_new(info.title.val);
 
     HINSTANCE hInstance = GetModuleHandle(NULL);
     WNDCLASS wc = {0};
@@ -140,7 +151,7 @@ Result window_init(PlatformInitConfig info, PlatformState* out) {
     HWND hwnd = CreateWindowEx(
         0,
         "GameWindowClass",
-        "Game",
+        info.title.val,
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, info.display.w, info.display.h,
         NULL,
@@ -150,7 +161,8 @@ Result window_init(PlatformInitConfig info, PlatformState* out) {
     );
 
     if (!hwnd) {
-        return RESULT_CODE_FAILED_DISPLAY_OPENING;
+        LOG_ERROR("failed to creat window handle");
+        return;
     }
 
     SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)out);
@@ -159,15 +171,15 @@ Result window_init(PlatformInitConfig info, PlatformState* out) {
     out->display.hwnd = hwnd;
     out->display.hInstance = hInstance;
 
-    return RESULT_CODE_SUCCESS;
+    return;
 }
 
-Result window_destroy(PlatformState *state) {
+void window_destroy(PlatformState *state) {
     DestroyWindow(state->display.hwnd);
     UnregisterClass("GameWindowClass", state->display.hInstance);
     state->display.hwnd = NULL;
     state->display.hInstance = NULL;
-    return RESULT_CODE_SUCCESS;
+    return;
 }
 
 void window_PullEvents(PlatformState* state) {

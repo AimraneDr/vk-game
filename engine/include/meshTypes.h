@@ -6,7 +6,6 @@
 typedef struct Vertex {
     Vec3 pos;
     Vec3 norm;
-    Vec4 color;
     Vec2 texCoord;
 }Vertex;
 

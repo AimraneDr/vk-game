@@ -2,7 +2,7 @@
 
 #include "core/debugger.h"
 #ifdef __linux__
-Result createSurface(const VkInstance instance, Display *dpy, Window w, VkSurfaceKHR *out)
+void createSurface(const VkInstance instance, Display *dpy, Window w, VkSurfaceKHR *out)
 {
     VkXlibSurfaceCreateInfoKHR createInfo = {
         .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,

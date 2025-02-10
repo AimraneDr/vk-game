@@ -8,28 +8,33 @@
 #include "core/input.h"
 #include "core/clock.h"
 #include "components/cameraComponent.h"
+#include "assets/asset_types.h"
+#include <string/str_types.h>
 
 
-typedef struct GameInitConfig{
+typedef struct GameConfig{
     struct{
-        char* title;
+        String title;
         u16 width, height;
         bool resizable;
         bool MaximizeAtStart;
     }display;
     struct {
-        Vec3 pos,rot;
-        f32 fiealdOfView;
+        Vec3 pos,rot,scale;
+        f32 orthographicSize;
+        f32 fieldOfView;
         f32 farPlane;
         f32 nearPlane;
+        bool useOrthographic;
     }camera;
     
-}GameInitConfig;
+}GameConfig;
 
 typedef struct GameState{
-    char* name;
+    String name;
     PlatformState platform;
     InputManager inputer;
+    AssetManager assetManager;
     Renderer renderer;
 
     Clock clock;
@@ -37,16 +42,22 @@ typedef struct GameState{
     //components
     Camera_Component camera;
 }GameState;
-/**
- * @brief initialize all sub-systems needed by the game
- * @param config init configurations for the game
- * @param out state-ptr for the game
- * @return
- *        RESULT_CODE_SUCCESS : if the initializing succeeded   
- *        RESULT_CODE_FAILED_SYS_INIT : if one or more systems had failed to initialize   
-*/
-API Result game_init(GameInitConfig config, GameState* out);
-API Result game_run(GameState* gState);
-API Result game_shutdown(GameState* gState);
+
+typedef struct GameInterface_t{
+    /// @brief provide costume configuration for the application
+    /// @param config ref to the application config struct
+    void (*config)(GameConfig* config);
+
+    /// @brief startup logic
+    void (*start)(GameState* state);
+
+    /// @brief update logic
+    void (*update)(GameState* state);
+    
+    /// @brief cleanup logic
+    void (*cleanup)(GameState* state);
+}GameInterface;
+
+API void game_run(GameInterface Interface);
 
 #endif //GAME_H

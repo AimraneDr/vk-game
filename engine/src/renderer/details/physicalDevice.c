@@ -7,7 +7,7 @@
 
 bool evaluatePhysicalDevice(const VkPhysicalDevice device, const VkSurfaceKHR surface);
 
-void selectPhysicalDevice(const VkInstance instance, const VkSurfaceKHR surface, VkPhysicalDevice *out)
+void selectPhysicalDevice(const VkInstance instance, const VkSurfaceKHR surface, VkPhysicalDevice *out, VkSampleCountFlagBits* outMsaaSamples)
 {
     u32 devicesCount = 0;
     vkEnumeratePhysicalDevices(instance, &devicesCount, 0);
@@ -18,18 +18,20 @@ void selectPhysicalDevice(const VkInstance instance, const VkSurfaceKHR surface,
         return;
     }
 
-    VkPhysicalDevice *devices = malloc(sizeof(VkPhysicalDevice) * devicesCount);
+    VkPhysicalDevice *gpus = malloc(sizeof(VkPhysicalDevice) * devicesCount);
 
-    vkEnumeratePhysicalDevices(instance, &devicesCount, devices);
+    vkEnumeratePhysicalDevices(instance, &devicesCount, gpus);
 
     for (u32 i = 0; i < devicesCount; i++)
     {
-        if (evaluatePhysicalDevice(devices[i], surface))
+        if (evaluatePhysicalDevice(gpus[i], surface))
         {
-            *out = devices[i];
+            *out = gpus[i];
+            *outMsaaSamples = getMaxUsableSampleCount(gpus[i]);
             break;
         }
     }
+    free(gpus);
 
     if (out == VK_NULL_HANDLE)
     {
@@ -121,4 +123,19 @@ bool evaluatePhysicalDevice(const VkPhysicalDevice device, const VkSurfaceKHR su
         freeSwapChainSupportDetails(&d);
     }
     return suitable && extensionsSuppoerted && swapChainAdequate && features.samplerAnisotropy;
+}
+
+VkSampleCountFlagBits getMaxUsableSampleCount(VkPhysicalDevice gpu) {
+    VkPhysicalDeviceProperties physicalDeviceProperties;
+    vkGetPhysicalDeviceProperties(gpu, &physicalDeviceProperties);
+
+    VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+    if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
+    if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
+    if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
+    if (counts & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
+    if (counts & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
+    if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
+
+    return VK_SAMPLE_COUNT_1_BIT;
 }

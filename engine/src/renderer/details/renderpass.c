@@ -3,27 +3,38 @@
 #include "renderer/details/depth.h"
 #include "core/debugger.h"
 
-void createRenderPass(VkPhysicalDevice gpu, VkDevice device, VkFormat swapchain_image_format, VkRenderPass* out_render_pass){
+void createRenderPass(VkPhysicalDevice gpu, VkDevice device, VkFormat swapchain_image_format, VkSampleCountFlagBits msaaSamples, VkRenderPass* out_render_pass){
     VkAttachmentDescription colorAttachment = {
         .format = swapchain_image_format,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .samples = msaaSamples,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+        .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     };
 
     VkAttachmentDescription depthAttachment = {
         .format = findDepthFormat(gpu),
-        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .samples = msaaSamples,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
         .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+    };
+
+    VkAttachmentDescription colorAttachmentResolve = {
+        .format = swapchain_image_format,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
     };
 
     VkAttachmentReference colorAttachmentRef = {
@@ -36,11 +47,17 @@ void createRenderPass(VkPhysicalDevice gpu, VkDevice device, VkFormat swapchain_
         .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     };
 
+    VkAttachmentReference colorAttachmentResolveRef = {
+        .attachment = 2,
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    };
+
     VkSubpassDescription subpass = {
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .colorAttachmentCount = 1,
         .pColorAttachments = &colorAttachmentRef,
-        .pDepthStencilAttachment = &depthAttachmentRef
+        .pDepthStencilAttachment = &depthAttachmentRef,
+        .pResolveAttachments = &colorAttachmentResolveRef
     };
 
     VkSubpassDependency dependency = {
@@ -52,8 +69,9 @@ void createRenderPass(VkPhysicalDevice gpu, VkDevice device, VkFormat swapchain_
         .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
     };
 
-    const u8 attachmentsCount = 2;
-    VkAttachmentDescription attachements[attachmentsCount] = {colorAttachment, depthAttachment};
+    const u8 attachmentsCount = 3;
+    VkAttachmentDescription attachements[attachmentsCount] = {colorAttachment, depthAttachment, colorAttachmentResolve};
+    
     VkRenderPassCreateInfo renderPassInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .attachmentCount = attachmentsCount,

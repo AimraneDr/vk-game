@@ -2,6 +2,7 @@
 #define PLATFORM_TYPES_H
 
 #include "data_types.h"
+#include <string/str_types.h>
 
 #ifdef __linux__
 
@@ -19,7 +20,7 @@ typedef struct PlatformInitConfig{
     struct {
         u32 w,h;
     } display;
-
+    String title;
 }PlatformInitConfig;
 
 #ifdef __linux__
@@ -36,6 +37,7 @@ typedef enum WindowState{
 
 typedef struct PlatformState{
     struct Window{
+        String title;
         u32 x,y;
         u32 width, height;
 

@@ -8,10 +8,8 @@
 
 // event's callbacks declaration
 
-void onKeyDown(EventType eType, void *sender, void *listener, EventContext eContext);
-void onKeyUp(EventType eType, void *sender, void *listener, EventContext eContext);
-void onButtonDown(EventType eType, void *sender, void *listener, EventContext eContext);
-void onButtonUp(EventType eType, void *sender, void *listener, EventContext eContext);
+void onKeyButtonDown(EventType eType, void *sender, void *listener, EventContext eContext);
+void onKeyButtonUp(EventType eType, void *sender, void *listener, EventContext eContext);
 void onMouseMove(EventType eType, void *sender, void *listener, EventContext eContext);
 void onMouseScroll(EventType eType, void *sender, void *listener, EventContext eContext);
 
@@ -25,25 +23,25 @@ static EventListener
 
 void input_system_init(InputManager *manager)
 {
-    manager->inputs = DynamicArray_Create(InputManager);
     manager->mouse = (MouseState){
         .pos = {0, 0},
-        .scroll = 0};
+        .delta = {0, 0},
+        .scrollDelta = 0};
 
     // subscribe to events
-    onKeyDownListener.callback = onKeyDown;
+    onKeyDownListener.callback = onKeyButtonDown;
     onKeyDownListener.listener = manager;
     subscribe_to_event(EVENT_TYPE_KEY_DOWN, &onKeyDownListener);
 
-    onKeyUpListener.callback = onKeyUp;
+    onKeyUpListener.callback = onKeyButtonUp;
     onKeyUpListener.listener = manager;
     subscribe_to_event(EVENT_TYPE_KEY_UP, &onKeyUpListener);
 
-    onButtonDownListener.callback = onButtonDown;
+    onButtonDownListener.callback = onKeyButtonDown;
     onButtonDownListener.listener = manager;
     subscribe_to_event(EVENT_TYPE_MOUSE_BUTTON_DOWN, &onButtonDownListener);
 
-    onButtonUpListener.callback = onButtonUp;
+    onButtonUpListener.callback = onKeyButtonUp;
     onButtonUpListener.listener = manager;
     subscribe_to_event(EVENT_TYPE_MOUSE_BUTTON_UP, &onButtonUpListener);
 
@@ -56,128 +54,85 @@ void input_system_init(InputManager *manager)
     subscribe_to_event(EVENT_TYPE_MOUSE_SCROLL, &onScrollListener);
 }
 
-void input_system_update(InputManager* manager){
-    for(u8 i=0; i<DynamicArray_Length(manager->inputs); i++){
-        if(manager->inputs[i].state == KEY_STATE_UP){
-            DynamicArray_PopAt(manager->inputs, i, 0);
+void input_system_update(InputManager* manager, f32 deltaTime){
+    for(u16 i=0; i<MAX_KEYS; i++){
+        if(manager->inputs[i] == KEY_STATE_RELEASED){
+            manager->inputs[i] = KEY_STATE_UP;
+            manager->pressTime[i] = 0.f;
+        } else if (manager->inputs[i] == KEY_STATE_DOWN) {
+            manager->inputs[i] = KEY_STATE_PRESSED;
+        }
+        if(manager->inputs[i] == KEY_STATE_PRESSED){
+            manager->pressTime[i] += deltaTime;
         }
     }
+    manager->mouse.scrollDelta = 0;
+    manager->mouse.delta.dx = 0;
+    manager->mouse.delta.dy = 0;
 }
 
 void input_system_shutdown(InputManager *manager)
 {
-    DynamicArray_Destroy(manager->inputs);
-
-    // unsubscribe from events
+    unsubsribe_from_event(EVENT_TYPE_KEY_DOWN, &onKeyDownListener);
+    unsubsribe_from_event(EVENT_TYPE_KEY_UP, &onKeyUpListener);
+    unsubsribe_from_event(EVENT_TYPE_MOUSE_BUTTON_DOWN, &onButtonDownListener);
+    unsubsribe_from_event(EVENT_TYPE_MOUSE_BUTTON_UP, &onButtonUpListener);
+    unsubsribe_from_event(EVENT_TYPE_MOUSE_MOVED, &onMouseMoveListener);
+    unsubsribe_from_event(EVENT_TYPE_MOUSE_SCROLL, &onScrollListener);
 }
 
 bool is_key_down(InputManager* manager, Key key){
-    for (u8 i = 0; i < DynamicArray_Length(manager->inputs); i++) {
-        if (manager->inputs[i].key == key) {
-            return manager->inputs[i].state == KEY_STATE_DOWN;
-        }
-    }
-    return false;
+    return manager->inputs[key] == KEY_STATE_DOWN;
 }
 bool is_key_up(InputManager* manager, Key key){
-    for (u8 i = 0; i < DynamicArray_Length(manager->inputs); i++) {
-        if (manager->inputs[i].key == key) {
-            return manager->inputs[i].state == KEY_STATE_UP;
-        }
-    }
-    return false;
+    return manager->inputs[key] == KEY_STATE_UP;
 }
 bool is_key_pressed(InputManager* manager, Key key){
-    for (u8 i = 0; i < DynamicArray_Length(manager->inputs); i++) {
-        if (manager->inputs[i].key == key) {
-            return manager->inputs[i].state == KEY_STATE_PRESSED;
-        }
-    }
-    return false;
+    return manager->inputs[key] == KEY_STATE_PRESSED;
 }
-
+bool is_key_released(InputManager* manager, Key key){
+    return manager->inputs[key] == KEY_STATE_RELEASED;
+}
+f32 get_key_press_duration(InputManager* manager, Key key) {
+    return manager->pressTime[key];
+}
 
 // event's callbacks definition
 
-void proccess_key_button_down(InputManager *manager, Key k)
-{
-    u8 totalInputs = DynamicArray_Length(manager->inputs);
-    bool inputFound = false;
-    for (u8 i = 0; i < totalInputs; i++)
-    {
-        if (manager->inputs[i].key == k)
-        {
-            inputFound = true;
-            if (manager->inputs[i].state == KEY_STATE_DOWN)
-            {
-                manager->inputs[i].state = KEY_STATE_PRESSED;
-                break;
-            }
-        }
-    }
-
-    // key is not found
-    if(!inputFound){
-        InputState state = {
-            .key = k,
-            .state = KEY_STATE_DOWN,
-        };
-        DynamicArray_Push(manager->inputs, state);
-    }
-}
-
-void onKeyDown(EventType eType, void *sender, void *listener, EventContext eContext)
+void onKeyButtonDown(EventType eType, void *sender, void *listener, EventContext eContext)
 {
     if(eContext.u8[0] == KEY_NULL) return;
 
     InputManager *manager = (InputManager *)listener;
-    proccess_key_button_down(manager, eContext.u8[0]);
-};
-void onKeyUp(EventType eType, void *sender, void *listener, EventContext eContext)
-{
-    if(eContext.u8[0] == KEY_NULL) return;
-
-    InputManager *manager = (InputManager *)listener;
-    for (u8 i = 0; i < DynamicArray_Length(manager->inputs); i++)
-    {
-        if (manager->inputs[i].key == eContext.u8[0])
-        {
-            manager->inputs[i].state = KEY_STATE_UP;
-            break;
-        }
+    Key k = eContext.u8[0];
+    if(manager->inputs[k] == KEY_STATE_UP || manager->inputs[k] == KEY_STATE_RELEASED){
+        manager->inputs[k] = KEY_STATE_DOWN;
     }
 };
-void onButtonDown(EventType eType, void *sender, void *listener, EventContext eContext)
+
+void onKeyButtonUp(EventType eType, void *sender, void *listener, EventContext eContext)
 {
     if(eContext.u8[0] == KEY_NULL) return;
-
     InputManager *manager = (InputManager *)listener;
-    proccess_key_button_down(manager, eContext.u8[0]);
+    Key k = eContext.u8[0];
+    manager->inputs[k] = KEY_STATE_RELEASED;
 };
-void onButtonUp(EventType eType, void *sender, void *listener, EventContext eContext)
-{
-    if(eContext.u8[0] == KEY_NULL) return;
 
-    InputManager *manager = (InputManager *)listener;
-    for (u8 i = 0; i < DynamicArray_Length(manager->inputs); i++)
-    {
-        if (manager->inputs[i].key == eContext.u8[0])
-        {
-            manager->inputs[i].state = KEY_STATE_UP;
-            break;
-        }
-    }
-};
 void onMouseMove(EventType eType, void *sender, void *listener, EventContext eContext)
 {
     InputManager *manager = (InputManager *)listener;
-    manager->mouse.pos.x = eContext.u16[0];
-    manager->mouse.pos.y = eContext.u16[1];
+    u16 newX = eContext.u16[0];
+    u16 newY = eContext.u16[1];
+
+    manager->mouse.delta.dx = newX - manager->mouse.pos.x; 
+    manager->mouse.delta.dy = newY - manager->mouse.pos.y; 
+    manager->mouse.pos.x = newX;
+    manager->mouse.pos.y = newY;
 };
 void onMouseScroll(EventType eType, void *sender, void *listener, EventContext eContext)
 {
     InputManager *manager = (InputManager *)listener;
-    manager->mouse.scroll += eContext.i16[0];
+    manager->mouse.scrollDelta += eContext.i16[0];
 };
 
 const char *key_name(Key key)
@@ -327,8 +282,6 @@ const char *key_name(Key key)
         return "MOUSE_BUTTON_0";
     case MOUSE_BUTTON_1:
         return "MOUSE_BUTTON_1";
-    case MOUSE_BUTTON_2:
-        return "MOUSE_BUTTON_2";
 
     // Special
     case KEY_NULL:

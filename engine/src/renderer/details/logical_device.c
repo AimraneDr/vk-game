@@ -1,11 +1,12 @@
 #include "renderer/details/logical_device.h"
 
+#include "core/debugger.h"
 #include "renderer/details/queue.h"
 #include "renderer/details/details.h"
 
 #include <stdlib.h>
 
-Result createLogicalDevice(const VkPhysicalDevice device, const VkSurfaceKHR surface, VkDevice* out_device, VkQueue* out_graphics_queue, VkQueue* out_present_queue){
+void createLogicalDevice(const VkPhysicalDevice device, const VkSurfaceKHR surface, VkDevice* out_device, VkQueue* out_graphics_queue, VkQueue* out_present_queue){
     QueueFamilyIndices indices = findQueueFamilies(device, surface);
 
     VkDeviceQueueCreateInfo* queueCreateInfos = (VkDeviceQueueCreateInfo*)malloc(sizeof(VkDeviceQueueCreateInfo) * indices.familiesCount);
@@ -22,7 +23,8 @@ Result createLogicalDevice(const VkPhysicalDevice device, const VkSurfaceKHR sur
     }
 
     VkPhysicalDeviceFeatures enabledFeatures = {
-        .samplerAnisotropy = VK_TRUE
+        .samplerAnisotropy = VK_TRUE,
+        .sampleRateShading = VK_TRUE,
     };
 
     VkDeviceCreateInfo createInfo = {
@@ -44,13 +46,14 @@ Result createLogicalDevice(const VkPhysicalDevice device, const VkSurfaceKHR sur
     VkResult result = vkCreateDevice(device, &createInfo, 0, out_device);
     free(queueCreateInfos);
 
-    if(result == VK_SUCCESS){
-        vkGetDeviceQueue(*out_device, indices.graphicsFamily, 0, out_graphics_queue);
-        vkGetDeviceQueue(*out_device, indices.presentFamily, 0, out_present_queue);
-        return RESULT_CODE_SUCCESS;
+    if(result != VK_SUCCESS){
+        LOG_FATAL("failed to create Logical Device");
+        return;
     }
-        
-    return RESULT_CODE_FAILED_DEVICE_CREATION;
+    
+    vkGetDeviceQueue(*out_device, indices.graphicsFamily, 0, out_graphics_queue);
+    vkGetDeviceQueue(*out_device, indices.presentFamily, 0, out_present_queue);
+    return;
 }
 
 void destroyLogicalDevice(VkDevice lDevice){

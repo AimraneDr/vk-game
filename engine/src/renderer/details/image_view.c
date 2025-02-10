@@ -3,7 +3,7 @@
 #include "core/debugger.h"
 #include <stdlib.h>
 
-VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags){
+VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, u16 mipLevels){
     VkImageViewCreateInfo viewInfo = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image,
@@ -11,7 +11,7 @@ VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkI
         .format = format,
         .subresourceRange.aspectMask = aspectFlags,
         .subresourceRange.baseMipLevel = 0,
-        .subresourceRange.levelCount = 1,
+        .subresourceRange.levelCount = mipLevels,
         .subresourceRange.baseArrayLayer = 0,
         .subresourceRange.layerCount = 1
     };
@@ -27,14 +27,14 @@ bool createSwapChainImageViews(
     VkDevice device, 
     VkImage *swapchain_images,
     u32 swapchain_images_count, 
-    VkFormat swapchain_image_format, 
+    VkFormat swapchain_image_format,
     VkImageView* out_views
 )
 {
 
     for (int i = 0; i < swapchain_images_count; i++)
     {
-        out_views[i] = createImageView(device, swapchain_images[i], swapchain_image_format, VK_IMAGE_ASPECT_COLOR_BIT);
+        out_views[i] = createImageView(device, swapchain_images[i], swapchain_image_format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
     }
     return TRUE;
 }

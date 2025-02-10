@@ -1,13 +1,14 @@
 CC = clang
 CFLAGS = -Wall -g
 
-EXE_NAME = game
+LIB_NAME = engine
 BUILD_DIR = bin
 OBJ_DIR = obj
+LIBS_DIR = C:\Users\aimra\Dev\libs
 
 DEFINES = -D_DEBUG
-INCLUDE_PATH = -Iinclude -I../engine/include -IC:/Users/aimra/Dev/c-toolbox/include -IC:\VulkanSDK\1.3.290.0\Include -IC:/Users/aimra/Dev/libs
-LINKER_FLAGS = -L"C:/Users/aimra/Dev/libs" -lengine -ltoolbox
+INCLUDE_PATH = -Iinclude -IC:/Users/aimra/Dev/c-toolbox/include -IC:\VulkanSDK\1.3.290.0\Include -I$(LIBS_DIR)
+LINKER_FLAGS = -L$(LIBS_DIR)  -lvulkan-1 -ltoolbox -luser32 -lgdi32
 
 SRC := $(shell dir /b /s src\*.c)
 SRC := $(subst \,/,$(SRC))
@@ -15,7 +16,7 @@ SRC := $(foreach file, $(SRC), $(subst $(CURDIR), ., $(file)))
 
 OBJ := $(patsubst ./src/%.c, ./$(OBJ_DIR)/%.o, $(SRC))
 
-all: $(BUILD_DIR) scaffold $(EXE_NAME)
+all: $(BUILD_DIR) scaffold $(LIB_NAME) install
 
 clean-build: clean all
 
@@ -29,18 +30,23 @@ scaffold:
 		$(shell if not exist "$(dir)" mkdir "$(dir)") \
 	)
 
-$(EXE_NAME): $(OBJ)
-	@echo building $(EXE_NAME) ...
-	@$(CC) -o $(BUILD_DIR)/$@.exe $^ $(LINKER_FLAGS)
+$(LIB_NAME): $(OBJ)
+	@echo building static library $@ ...
+	@llvm-ar rcs $(BUILD_DIR)/$@.lib $^
 	@echo done.
+
+install:
+	@echo installing library to $(LIBS_DIR) ...
+	@copy "$(BUILD_DIR)\$(LIB_NAME).lib" "$(LIBS_DIR)"
+	@echo installation complete.
 
 $(OBJ_DIR)/%.o: ./src/%.c
 	@echo compiling $@...
-	@$(CC) $(CFLAGS) -c -o $@ $< $(INCLUDE_PATH) $(DEFINES)
+	@$(CC) $(CFLAGS) -c -o $@ $< $(INCLUDE_PATH) $(DEFINES) 
 
 clean:
 	@echo cleaning ...
 	@rmdir /s /q "$(BUILD_DIR)"
 	@rmdir /s /q "$(OBJ_DIR)"
 
-.PHONY: all scaffold clean
+.PHONY: all scaffold clean install

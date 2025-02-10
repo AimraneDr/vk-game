@@ -2,8 +2,11 @@
 #define EVENT_H
 
 #include "data_types.h"
+#include "engine_defines.h"
 
 #define CAST_EVENT_CONTEXT(context, event_type) *(event_type*)&context
+#define EVENT_CALLBACK(name) void name(EventType eType, void* sender,  void* listener, EventContext eContext)
+
 
 typedef enum EventType_e{
     //window events
@@ -61,9 +64,9 @@ typedef struct EventListener_t{
 
 //functions
 void init_event_sys();
-void subscribe_to_event(EventType t, EventListener* listener);
+API void subscribe_to_event(EventType t, EventListener* listener);
 void emit_event(EventType e, EventContext context, void* sender);
-void unsubsribe_from_event(EventType t, EventListener* listener);
+API void unsubsribe_from_event(EventType t, EventListener* listener);
 void shutdown_event_sys();
 
 

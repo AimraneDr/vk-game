@@ -8,8 +8,8 @@ typedef struct EventContextWindowResize_t{
     u32 width,height;
 }EventContextWindowResize;
 
-Result window_init(PlatformInitConfig info, PlatformState* out_state);
-Result window_destroy(PlatformState* state);
+void window_init(PlatformInitConfig info, PlatformState* out_state);
+void window_destroy(PlatformState* state);
 
 void window_PullEvents(PlatformState* state);
 

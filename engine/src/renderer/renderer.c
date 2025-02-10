@@ -26,11 +26,14 @@
 #include "renderer/details/commandPool.h"
 #include "renderer/details/commandBuffer.h"
 #include "renderer/details/sync.h"
+#include "renderer/details/color.h"
 #include "renderer/details/depth.h"
 #include "core/events.h"
 
-Result renderer_createVulkanInstance(VkInstance *instance);
-Result renderer_initDebugMessanger(VkInstance *instance, VkDebugUtilsMessengerEXT *out);
+#include <collections/DynamicArray.h>
+
+void renderer_createVulkanInstance(VkInstance *instance);
+void renderer_initDebugMessanger(VkInstance *instance, VkDebugUtilsMessengerEXT *out);
 VkDebugUtilsMessengerCreateInfoEXT getDebugMessangerCreateInfo();
 
 void renderer_destroyDebugMessanger(VkInstance instance, VkDebugUtilsMessengerEXT messanger);
@@ -40,7 +43,6 @@ void recreateSwapChainObject(Renderer *r, u32 width, u32 height, WindowState vis
 void onWindowResize(EventType eType, void *sender, void *listener, EventContext context)
 {
     ((Renderer *)listener)->framebufferResized = true;
-    LOG_TRACE("Window resized handled by the renderer.");
 }
 
 u32 verticesCount = 8;
@@ -58,15 +60,16 @@ Vertex vertices[] = {
 };
 
 u32 indicesCount = 12;
-u16 indices[] = {
+u32 indices[] = {
     4, 5, 6, 6, 7, 4,
     0, 1, 2, 2, 3, 0};
 
-Result renderer_init(Renderer *r, PlatformState *p)
+void renderer_init(Renderer *r, PlatformState *p, AssetManager* assetsM)
 {
     r->physicalDevice = VK_NULL_HANDLE;
     r->currentFrame = 0;
     r->framebufferResized = false;
+    r->msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 
     renderer_createVulkanInstance(&r->instance);
     renderer_initDebugMessanger(&r->instance, &r->debugMessanger);
@@ -78,28 +81,32 @@ Result renderer_init(Renderer *r, PlatformState *p)
     createSurface(r->instance, &p->display.hInstance, &p->display.hwnd, &r->surface);
 #endif
 
-    selectPhysicalDevice(r->instance, r->surface, &r->physicalDevice);
+    selectPhysicalDevice(r->instance, r->surface, &r->physicalDevice, &r->msaaSamples);
     createLogicalDevice(r->physicalDevice, r->surface, &r->logicalDevice, &r->graphicsQueue, &r->presentQueue);
     createSwapChain(r->physicalDevice, r->logicalDevice, r->surface, p->display.width, p->display.height, &r->swapchain, &r->swapchainImages, &r->swapchainImagesCount, &r->swapchainImageFormat, &r->swapchainExtent);
 
     r->swapchainImageViews = (VkImageView *)malloc(sizeof(VkImageView) * r->swapchainImagesCount);
     createSwapChainImageViews(r->logicalDevice, r->swapchainImages, r->swapchainImagesCount, r->swapchainImageFormat, r->swapchainImageViews);
 
-    createRenderPass(r->physicalDevice, r->logicalDevice, r->swapchainImageFormat, &r->renderPass);
+    createRenderPass(r->physicalDevice, r->logicalDevice, r->swapchainImageFormat, r->msaaSamples, &r->renderPass);
     createDescriptorSetLayout(r->logicalDevice, &r->descriptorSetLayout);
-    createPipeline(r->logicalDevice, "shaders/default/vert.spv", "shaders/default/frag.spv", r->swapchainExtent, r->renderPass, r->descriptorSetLayout, &r->pipelineLayout, &r->graphicsPipeline);
+    createPipeline(r->logicalDevice, "shaders/default/vert.spv", "shaders/default/frag.spv", r->swapchainExtent, r->msaaSamples, r->renderPass, r->descriptorSetLayout, &r->pipelineLayout, &r->graphicsPipeline);
 
     createCommandPool(r->physicalDevice, r->logicalDevice, r->surface, &r->commandPool);
 
-    createDepthResources(r->physicalDevice, r->logicalDevice, r->commandPool, r->graphicsQueue, r->swapchainExtent, &r->depthImage, &r->depthImageMemory, &r->depthImageView);
-    createFramebuffers(r->logicalDevice, r->renderPass, r->swapchainImageViews, r->depthImageView, r->swapchainImagesCount, r->swapchainExtent, &r->shwapchainFrameBuffers);
+    createColorResources(r->physicalDevice, r->logicalDevice, r->commandPool, r->graphicsQueue, r->swapchainExtent, r->msaaSamples, r->swapchainImageFormat, &r->colorImage, &r->colorImageMemory, &r->colorImageView);
+    createDepthResources(r->physicalDevice, r->logicalDevice, r->commandPool, r->graphicsQueue, r->swapchainExtent, r->msaaSamples, &r->depthImage, &r->depthImageMemory, &r->depthImageView);
+    createFramebuffers(r->logicalDevice, r->renderPass, r->swapchainImageViews, r->colorImageView, r->depthImageView, r->swapchainImagesCount, r->swapchainExtent, &r->shwapchainFrameBuffers);
 
-    createTextureImage(r->physicalDevice, r->logicalDevice, r->commandPool, r->graphicsQueue, &r->textureImage, &r->textureImageMemory);
-    createTextureImageView(r->logicalDevice, r->textureImage, &r->textureImageView);
-    createTextureImageSampler(r->physicalDevice, r->logicalDevice, &r->textureSampler);
+    createTextureImage(r->physicalDevice, r->logicalDevice, r->commandPool, r->graphicsQueue, &r->mipLevels, &r->textureImage, &r->textureImageMemory);
+    createTextureImageView(r->logicalDevice, r->textureImage, r->mipLevels, &r->textureImageView);
+    createTextureImageSampler(r->physicalDevice, r->logicalDevice, r->mipLevels, &r->textureSampler);
 
-    createVertexBuffer(r->physicalDevice, r->logicalDevice, r->graphicsQueue, r->commandPool, verticesCount, vertices, &r->vertexBuffer, &r->vertexBufferMemory);
-    createIndexBuffer(r->physicalDevice, r->logicalDevice, r->graphicsQueue, r->commandPool, indicesCount, indices, &r->indexBuffer, &r->indexBufferMemory);
+    Model* m = assetsM->assets[ASSET_TYPE_MODEL][0].data;
+    // createVertexBuffer(r->physicalDevice, r->logicalDevice, r->graphicsQueue, r->commandPool, verticesCount, vertices, &r->vertexBuffer, &r->vertexBufferMemory);
+    createVertexBuffer(r->physicalDevice, r->logicalDevice, r->graphicsQueue, r->commandPool, m->vertex_count, m->vertices, &r->vertexBuffer, &r->vertexBufferMemory);
+    // createIndexBuffer(r->physicalDevice, r->logicalDevice, r->graphicsQueue, r->commandPool, indicesCount, indices, &r->indexBuffer, &r->indexBufferMemory);
+    createIndexBuffer(r->physicalDevice, r->logicalDevice, r->graphicsQueue, r->commandPool, m->index_count, m->indices, &r->indexBuffer, &r->indexBufferMemory);
     createUniformBuffer(r->physicalDevice, r->logicalDevice, r->uniformBuffers, r->uniformBuffersMemory, r->uniformBuffersMapped);
 
     createDescriptorPool(r->logicalDevice, &r->descriptorPool);
@@ -114,11 +121,11 @@ Result renderer_init(Renderer *r, PlatformState *p)
         .listener = r};
     subscribe_to_event(EVENT_TYPE_WINDOW_RESIZED, &onResizeListener);
 
-    return RESULT_CODE_SUCCESS;
+    return;
 };
 
-Result renderer_shutdown(Renderer *r)
-{
+void renderer_shutdown(Renderer *r)
+{    
     vkDeviceWaitIdle(r->logicalDevice);
 
     destroySyncObjects(r->logicalDevice, r->imageAvailableSemaphores, r->renderFinishedSemaphores, r->inFlightFences);
@@ -132,6 +139,7 @@ Result renderer_shutdown(Renderer *r)
     destroyCommandPool(r->logicalDevice, r->commandPool);
     destroyFramebuffers(r->logicalDevice, r->shwapchainFrameBuffers, r->swapchainImagesCount);
     destroyDepthResources(r->logicalDevice, r->depthImage, r->depthImageMemory, r->depthImageView);
+    destroyColorResources(r->logicalDevice, r->colorImage, r->colorImageMemory, r->colorImageView);
     destroyPipeline(r->logicalDevice, &r->graphicsPipeline, r->pipelineLayout);
 
     destroyDescriptorPool(r->logicalDevice, r->descriptorPool);
@@ -144,10 +152,10 @@ Result renderer_shutdown(Renderer *r)
     destroySurface(r->instance, r->surface);
     renderer_destroyDebugMessanger(r->instance, r->debugMessanger);
     vkDestroyInstance(r->instance, 0);
-    return RESULT_CODE_SUCCESS;
+    return;
 };
 
-void renderer_draw(Camera_Component *camera, Renderer *r, PlatformState *p, f64 deltatime)
+void renderer_draw(Camera_Component *camera, Renderer *r, PlatformState *p, AssetManager* assetsM, f64 deltatime)
 {
     vkWaitForFences(r->logicalDevice, 1, &r->inFlightFences[r->currentFrame], VK_TRUE, UINT64_MAX);
 
@@ -166,8 +174,10 @@ void renderer_draw(Camera_Component *camera, Renderer *r, PlatformState *p, f64 
     vkResetFences(r->logicalDevice, 1, &r->inFlightFences[r->currentFrame]);
     vkResetCommandBuffer(r->commandBuffers[r->currentFrame], 0);
 
+    Model* m = assetsM->assets[ASSET_TYPE_MODEL][0].data;
+
     updateUniformBuffer(r->currentFrame, (Vec2){p->display.width, p->display.height}, r->uniformBuffersMapped, deltatime, camera);
-    recordCommandBuffer(r->commandBuffers[r->currentFrame], r->graphicsPipeline, r->pipelineLayout, r->renderPass, r->shwapchainFrameBuffers, r->swapchainExtent, imageIndex, r->vertexBuffer, r->indexBuffer, indicesCount, &r->descriptorSets[r->currentFrame]);
+    recordCommandBuffer(r->commandBuffers[r->currentFrame], r->graphicsPipeline, r->pipelineLayout, r->renderPass, r->shwapchainFrameBuffers, r->swapchainExtent, imageIndex, r->vertexBuffer, r->indexBuffer, m->index_count, &r->descriptorSets[r->currentFrame]);
 
     VkSemaphore waitSemaphores[] = {r->imageAvailableSemaphores[r->currentFrame]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
@@ -204,9 +214,6 @@ void renderer_draw(Camera_Component *camera, Renderer *r, PlatformState *p, f64 
     if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || r->framebufferResized)
     {
         r->framebufferResized = false;
-        // TODO : move to camera_component
-        camera->transform.scale.x = p->display.width;
-        camera->transform.scale.y = p->display.height;
         recreateSwapChainObject(r, p->display.width, p->display.height, p->display.visibility);
     }
     else if (res != VK_SUCCESS)
@@ -215,10 +222,17 @@ void renderer_draw(Camera_Component *camera, Renderer *r, PlatformState *p, f64 
         return;
     }
 
+    if(assetsM->assets[ASSET_TYPE_MODEL] != 0){
+        for(u8 i=0; i < DynamicArray_Length(assetsM->assets[ASSET_TYPE_MODEL]); i++){
+            Model* a = (Model*)assetsM->assets[ASSET_TYPE_MODEL][i].data;
+        }
+    }
+
+
     r->currentFrame = (r->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-Result renderer_createVulkanInstance(VkInstance *instance)
+void renderer_createVulkanInstance(VkInstance *instance)
 {
     VkApplicationInfo appInof = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -263,13 +277,12 @@ Result renderer_createVulkanInstance(VkInstance *instance)
         free(ext_names[i]);
     free(ext_names);
 
-    if (res == VK_SUCCESS)
+    if (res != VK_SUCCESS)
     {
-        LOG_INFO("vulkan instance created successfully");
-        return RESULT_CODE_SUCCESS;
+        LOG_FATAL("failed to create vulkan instance !");
+        return;
     }
-
-    return RESULT_CODE_FAILED_SYS_INIT;
+    return;
 }
 
 VkBool32 debugMessangerCallBack(
@@ -312,22 +325,19 @@ VkDebugUtilsMessengerCreateInfoEXT getDebugMessangerCreateInfo()
         .pUserData = 0};
 }
 
-Result renderer_initDebugMessanger(VkInstance *instance, VkDebugUtilsMessengerEXT *out)
+void renderer_initDebugMessanger(VkInstance *instance, VkDebugUtilsMessengerEXT *out)
 {
     if (!isValidationLayersEnabled())
-        return RESULT_CODE_SUCCESS;
+        return;
 
     VkDebugUtilsMessengerCreateInfoEXT info = getDebugMessangerCreateInfo();
 
     PFN_vkCreateDebugUtilsMessengerEXT func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(*instance, "vkCreateDebugUtilsMessengerEXT");
-    if (func != 0)
+    if (func == 0 || func(*instance, &info, 0, out) != VK_SUCCESS)
     {
-        if (func(*instance, &info, 0, out) == VK_SUCCESS)
-        {
-            return RESULT_CODE_SUCCESS;
-        }
+        LOG_ERROR("faild to create vulkan debug messanger");
     }
-    return RESULT_CODE_FAILED_DEBUG_MESSANGER_CREATION;
+    return;
 }
 
 void renderer_destroyDebugMessanger(VkInstance instance, VkDebugUtilsMessengerEXT messanger)
@@ -350,12 +360,15 @@ void recreateSwapChainObject(Renderer *r, u32 width, u32 height, WindowState vis
     vkDeviceWaitIdle(r->logicalDevice);
 
     destroyFramebuffers(r->logicalDevice, r->shwapchainFrameBuffers, r->swapchainImagesCount);
+    destroyDepthResources(r->logicalDevice, r->depthImage,r->depthImageMemory, r->depthImageView);
+    destroyColorResources(r->logicalDevice, r->colorImage, r->colorImageMemory, r->colorImageView);
     destroySwapChainImageViews(r->logicalDevice, r->swapchainImageViews, r->swapchainImagesCount);
     destroySwapChain(r->logicalDevice, r->swapchain);
 
     createSwapChain(r->physicalDevice, r->logicalDevice, r->surface, width, height, &r->swapchain, &r->swapchainImages, &r->swapchainImagesCount, &r->swapchainImageFormat, &r->swapchainExtent);
     r->swapchainImageViews = (VkImageView *)malloc(sizeof(VkImageView) * r->swapchainImagesCount);
     createSwapChainImageViews(r->logicalDevice, r->swapchainImages, r->swapchainImagesCount, r->swapchainImageFormat, r->swapchainImageViews);
-    createDepthResources(r->physicalDevice, r->logicalDevice, r->commandPool, r->graphicsQueue, r->swapchainExtent, &r->depthImage, &r->depthImageMemory, &r->depthImageView);
-    createFramebuffers(r->logicalDevice, r->renderPass, r->swapchainImageViews, r->depthImageView, r->swapchainImagesCount, r->swapchainExtent, &r->shwapchainFrameBuffers);
+    createColorResources(r->physicalDevice, r->logicalDevice, r->commandPool, r->graphicsQueue, r->swapchainExtent, r->msaaSamples, r->swapchainImageFormat, &r->colorImage, &r->colorImageMemory, &r->colorImageView);
+    createDepthResources(r->physicalDevice, r->logicalDevice, r->commandPool, r->graphicsQueue, r->swapchainExtent, r->msaaSamples, &r->depthImage, &r->depthImageMemory, &r->depthImageView);
+    createFramebuffers(r->logicalDevice, r->renderPass, r->swapchainImageViews, r->colorImageView, r->depthImageView, r->swapchainImagesCount, r->swapchainExtent, &r->shwapchainFrameBuffers);
 }

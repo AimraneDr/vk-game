@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 
-Result window_init(PlatformInitConfig info, PlatformState* out){
+void window_init(PlatformInitConfig info, PlatformState* out){
 
     out->display.shouldClose = false;
     out->display.isResizing = false;
@@ -55,10 +55,10 @@ Result window_init(PlatformInitConfig info, PlatformState* out){
 
     // printf("window (x, y) => (%d, %d)\n", win_x, win_y);
 
-    return RESULT_CODE_SUCCESS;
+    return;
 }
 
-Result window_destroy(PlatformState *state){
+void window_destroy(PlatformState *state){
     XUnmapWindow(state->display.display, state->display.window);
     XDestroyWindow(state->display.display, state->display.window);
     XCloseDisplay(state->display.display);
@@ -67,7 +67,7 @@ Result window_destroy(PlatformState *state){
     state->display.height = 0;
     state->display.x = 0;
     state->display.y = 0;
-    return RESULT_CODE_SUCCESS;
+    return;
 }
 
 

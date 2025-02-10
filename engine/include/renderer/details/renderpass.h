@@ -3,7 +3,7 @@
 
 #include "renderer/render_types.h"
 
-void createRenderPass(VkPhysicalDevice gpu, VkDevice device, VkFormat swapchain_image_format, VkRenderPass* out_render_pass);
+void createRenderPass(VkPhysicalDevice gpu, VkDevice device, VkFormat swapchain_image_format, VkSampleCountFlagBits msaaSamples, VkRenderPass* out_render_pass);
 void destroyRenderPass(VkDevice device, VkRenderPass render_pass);
 
 #endif //RENDERPASS_H

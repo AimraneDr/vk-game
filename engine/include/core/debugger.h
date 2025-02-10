@@ -1,6 +1,7 @@
 #ifndef DEBUGGER_H
 #define DEBUGGER_H
 #include "data_types.h"
+#include "engine_defines.h"
 
 typedef enum{
     LOG_TRACE,
@@ -20,7 +21,7 @@ typedef struct Debugger_t{
 
 static Debugger debug = {0};
 
-void logMessage(LogLevel level, const char* message, ...);
+API void logMessage(LogLevel level, const char* message, ...);
 
 #define LOG_TRACE(...) logMessage(LOG_TRACE, __VA_ARGS__)
 #define LOG_DEBUG(...) logMessage(LOG_DEBUG, __VA_ARGS__)

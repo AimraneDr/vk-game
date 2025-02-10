@@ -7,6 +7,7 @@ void createFramebuffers(
     VkDevice device, 
     VkRenderPass render_pass, 
     VkImageView *swapchain_image_views, 
+    VkImageView colorImageView,
     VkImageView depthImageView,
     u32 swapchain_image_count, 
     VkExtent2D swapchain_extent, 
@@ -14,10 +15,11 @@ void createFramebuffers(
     ){
         VkFramebuffer* temp = (VkFramebuffer*)malloc(sizeof(VkFramebuffer) * swapchain_image_count);
         for(u32 i=0; i < swapchain_image_count; i++){
-            const u8 attachmentsCount = 2;
+            const u8 attachmentsCount = 3;
             VkImageView attachments[attachmentsCount] = {
+                colorImageView,
+                depthImageView,
                 swapchain_image_views[i],
-                depthImageView
             };
 
             VkFramebufferCreateInfo framebufferInfo = {

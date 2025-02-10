@@ -43,24 +43,13 @@ void updateUniformBuffer(uint32_t currentImage, Vec2 frameSize, void** uniformBu
     // camera->transform.rotation.x-=deltatime*turnSpeed;
 
     camera_updateViewMat(camera);
-    camera_updateProjectionMat(camera);
+    camera_updateProjectionMat(camera, frameSize);
 
     UniformBufferObject ubo;
     static float angle = 0;
     angle += deltatime * deg_to_rad(90.0f);
     ubo.model = MAT4_IDENTITY;
-    // ubo.model = mat4_rotate(angle, (Vec3){.0f, .0f, 1.0f});
-    // ubo.view = mat4_lookAt(
-    //     cameraPos,  // eye
-    //     VEC3_ZERO,  //target
-    //     VEC3_UP   // up
-    // );
-    // ubo.proj = mat4_perspective(
-    //     deg_to_rad(45.0f),       // 45 degrees in radians
-    //     frameSize.x / frameSize.y,
-    //     0.01f,
-    //     100.0f
-    // );
+    ubo.model = mat4_rotate(angle, (Vec3){.0f, 1.0f, .0f});
     ubo.view = camera->view;
     ubo.proj = camera->projection;
 
