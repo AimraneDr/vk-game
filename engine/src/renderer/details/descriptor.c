@@ -14,8 +14,8 @@ void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out){
     };
     VkDescriptorSetLayoutBinding samplerLayoutBinding = {
         .binding = 1,
-        .descriptorCount = 1,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .descriptorCount = 1,
         .pImmutableSamplers = 0,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
     };

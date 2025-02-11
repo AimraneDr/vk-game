@@ -2,9 +2,7 @@
 #define ASSET_TYPES_H
 
 #include "data_types.h"
-#include "meshTypes.h"
 #include <string/str_types.h>
-#include <math/mathTypes.h>
 
 typedef enum AssetType_e{
     ASSET_TYPE_TEXTURE,
@@ -28,13 +26,5 @@ typedef struct AssetManager_t {
     Asset* assets[ASSET_MAX_TYPE];
     u32 asset_count;
 } AssetManager;
-
-typedef struct Model_t{
-    u32 id;
-    Vertex* vertices;
-    u32* indices;
-    u32 vertex_count;
-    u32 index_count;
-}Model;
 
 #endif //ASSET_TYPES_H

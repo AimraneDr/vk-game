@@ -139,12 +139,18 @@ void createPipeline(
         .blendConstants = {0.0f, 0.0f, 0.0f, 0.0f} // Optional
     };
 
+    VkPushConstantRange push_constant_range = {
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        .offset = 0,
+        .size = sizeof(Mat4)
+    };
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         .setLayoutCount = 1, // Optional
         .pSetLayouts = &descriptorSetLayout, // Optional
-        .pushConstantRangeCount = 0, // Optional
-        .pPushConstantRanges = 0 // Optional
+        .pushConstantRangeCount = 1,
+        .pPushConstantRanges = &push_constant_range
     };
 
     if(vkCreatePipelineLayout(device, &pipelineLayoutInfo, 0, out_layout) != VK_SUCCESS){

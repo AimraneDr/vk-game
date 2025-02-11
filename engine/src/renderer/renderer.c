@@ -30,6 +30,8 @@
 #include "renderer/details/depth.h"
 #include "core/events.h"
 
+#include "core/clock.h"
+
 #include <collections/DynamicArray.h>
 
 void renderer_createVulkanInstance(VkInstance *instance);
@@ -45,26 +47,7 @@ void onWindowResize(EventType eType, void *sender, void *listener, EventContext 
     ((Renderer *)listener)->framebufferResized = true;
 }
 
-u32 verticesCount = 8;
-Vertex vertices[] = {
-    // pos                //norm     //color         //texCoord
-    {{-0.5f, -0.5f, 0.f}, {0}, {1.0f, .0f, .0f, 1.0f}, {1.f, 0.f}}, // left bottom
-    {{0.5f, -0.5f, 0.f}, {0}, {0.f, 0.f, 1.0f, 1.f}, {0.f, 0.f}},   // right bottom
-    {{0.5f, 0.5f, 0.f}, {0}, {0.f, 0.f, 1.f, 1.f}, {0.f, 1.f}},     // right top
-    {{-0.5f, 0.5f, 0.f}, {0}, {1.0f, 0.f, 0.f, 1.f}, {1.f, 1.f}},   // left top
-
-    {{-0.5f, -0.5f, 0.5f}, {0}, {1.0f, .0f, .0f, 1.0f}, {1.f, 0.f}}, // left bottom
-    {{0.5f, -0.5f, 0.5f}, {0}, {0.f, 0.f, 1.0f, 1.f}, {0.f, 0.f}},   // right bottom
-    {{0.5f, 0.5f, 0.5f}, {0}, {0.f, 0.f, 1.f, 1.f}, {0.f, 1.f}},     // right top
-    {{-0.5f, 0.5f, 0.5f}, {0}, {1.0f, 0.f, 0.f, 1.f}, {1.f, 1.f}}    // left top
-};
-
-u32 indicesCount = 12;
-u32 indices[] = {
-    4, 5, 6, 6, 7, 4,
-    0, 1, 2, 2, 3, 0};
-
-void renderer_init(Renderer *r, PlatformState *p, AssetManager* assetsM)
+void renderer_init(Renderer *r, PlatformState *p)
 {
     r->physicalDevice = VK_NULL_HANDLE;
     r->currentFrame = 0;
@@ -102,11 +85,6 @@ void renderer_init(Renderer *r, PlatformState *p, AssetManager* assetsM)
     createTextureImageView(r->logicalDevice, r->textureImage, r->mipLevels, &r->textureImageView);
     createTextureImageSampler(r->physicalDevice, r->logicalDevice, r->mipLevels, &r->textureSampler);
 
-    Model* m = assetsM->assets[ASSET_TYPE_MODEL][0].data;
-    // createVertexBuffer(r->physicalDevice, r->logicalDevice, r->graphicsQueue, r->commandPool, verticesCount, vertices, &r->vertexBuffer, &r->vertexBufferMemory);
-    createVertexBuffer(r->physicalDevice, r->logicalDevice, r->graphicsQueue, r->commandPool, m->vertex_count, m->vertices, &r->vertexBuffer, &r->vertexBufferMemory);
-    // createIndexBuffer(r->physicalDevice, r->logicalDevice, r->graphicsQueue, r->commandPool, indicesCount, indices, &r->indexBuffer, &r->indexBufferMemory);
-    createIndexBuffer(r->physicalDevice, r->logicalDevice, r->graphicsQueue, r->commandPool, m->index_count, m->indices, &r->indexBuffer, &r->indexBufferMemory);
     createUniformBuffer(r->physicalDevice, r->logicalDevice, r->uniformBuffers, r->uniformBuffersMemory, r->uniformBuffersMapped);
 
     createDescriptorPool(r->logicalDevice, &r->descriptorPool);
@@ -133,8 +111,7 @@ void renderer_shutdown(Renderer *r)
     destroyTextureSampler(r->logicalDevice, r->textureSampler);
     destroyTextureImageView(r->logicalDevice, r->textureImageView);
     destroyTextureImage(r->logicalDevice, r->textureImage, r->textureImageMemory);
-    destroyIndexBuffer(r->logicalDevice, r->indexBuffer, r->indexBufferMemory);
-    destroyVertexBuffer(r->logicalDevice, r->vertexBuffer, r->vertexBufferMemory);
+    
     destroyCommandBuffer(r->logicalDevice, r->commandPool, r->commandBuffers);
     destroyCommandPool(r->logicalDevice, r->commandPool);
     destroyFramebuffers(r->logicalDevice, r->shwapchainFrameBuffers, r->swapchainImagesCount);
@@ -155,10 +132,10 @@ void renderer_shutdown(Renderer *r)
     return;
 };
 
-void renderer_draw(Camera_Component *camera, Renderer *r, PlatformState *p, AssetManager* assetsM, f64 deltatime)
+void renderer_draw(Camera_Component *camera, Renderer *r, PlatformState *p, MeshRenderer_Component* meshRenderers, f64 deltatime)
 {
     vkWaitForFences(r->logicalDevice, 1, &r->inFlightFences[r->currentFrame], VK_TRUE, UINT64_MAX);
-
+    
     u32 imageIndex;
     VkResult res = vkAcquireNextImageKHR(r->logicalDevice, r->swapchain, UINT64_MAX, r->imageAvailableSemaphores[r->currentFrame], VK_NULL_HANDLE, &imageIndex);
     if (res == VK_ERROR_OUT_OF_DATE_KHR)
@@ -174,10 +151,19 @@ void renderer_draw(Camera_Component *camera, Renderer *r, PlatformState *p, Asse
     vkResetFences(r->logicalDevice, 1, &r->inFlightFences[r->currentFrame]);
     vkResetCommandBuffer(r->commandBuffers[r->currentFrame], 0);
 
-    Model* m = assetsM->assets[ASSET_TYPE_MODEL][0].data;
-
     updateUniformBuffer(r->currentFrame, (Vec2){p->display.width, p->display.height}, r->uniformBuffersMapped, deltatime, camera);
-    recordCommandBuffer(r->commandBuffers[r->currentFrame], r->graphicsPipeline, r->pipelineLayout, r->renderPass, r->shwapchainFrameBuffers, r->swapchainExtent, imageIndex, r->vertexBuffer, r->indexBuffer, m->index_count, &r->descriptorSets[r->currentFrame]);
+    
+    recordCommandBuffer(
+        r->commandBuffers[r->currentFrame], 
+        r->graphicsPipeline, 
+        r->pipelineLayout, 
+        r->renderPass, 
+        r->shwapchainFrameBuffers, 
+        r->swapchainExtent, 
+        imageIndex, 
+        &r->descriptorSets[r->currentFrame],
+        meshRenderers
+    );
 
     VkSemaphore waitSemaphores[] = {r->imageAvailableSemaphores[r->currentFrame]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
@@ -221,14 +207,6 @@ void renderer_draw(Camera_Component *camera, Renderer *r, PlatformState *p, Asse
         LOG_FATAL("failed to present swap chain image!");
         return;
     }
-
-    if(assetsM->assets[ASSET_TYPE_MODEL] != 0){
-        for(u8 i=0; i < DynamicArray_Length(assetsM->assets[ASSET_TYPE_MODEL]); i++){
-            Model* a = (Model*)assetsM->assets[ASSET_TYPE_MODEL][i].data;
-        }
-    }
-
-
     r->currentFrame = (r->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 

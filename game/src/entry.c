@@ -7,6 +7,11 @@
 #include <assets/asset_manager.h>
 #include <core/files.h>
 #include <core/events.h>
+#include <components/meshRendererComponent.h>
+#include <collections/DynamicArray.h>
+
+#include <math/trigonometry.h>
+#include <math/mat.h>
 
 #include <math/vec3.h>
 
@@ -29,6 +34,15 @@ void config(GameConfig* config){
 }
 
 void start(GameState* state){
+    Asset a = load_asset(&state->assetManager, "./../resources/models/viking_room.obj");
+    Asset a1 = load_asset(&state->assetManager, "./../resources/models/cube.obj");
+    MeshRenderer_Component mesh0,mesh1;
+    createMeshRenderer(a.data, &state->renderer, &mesh0);
+    createMeshRenderer(a1.data, &state->renderer, &mesh1);
+    DynamicArray_Push(state->meshRenderers, mesh0);
+    DynamicArray_Push(state->meshRenderers, mesh1);
+    release_asset(&state->assetManager, &a);
+    release_asset(&state->assetManager, &a1);
 }
 
 void update(GameState* state){
@@ -43,9 +57,27 @@ void update(GameState* state){
             state->camera.fieldOfView += state->inputer.mouse.scrollDelta * changeSpeed;
         }
     }
+    static float angle = 0;
+    angle += state->clock.deltaTime * deg_to_rad(90.0f);
+    i8 dir = 1;
+    f32 scale = 1.f;
+    for(u32 i=0; i < DynamicArray_Length(state->meshRenderers); i++){
+        state->meshRenderers[i].mat4 = mat4_mul(
+            mat4_scaling((Vec3){scale, scale, scale}),
+            mat4_mul(
+                mat4_rotation(angle, (Vec3){.0f, 1.0f, .0f}),
+                mat4_translation((Vec3){dir * 1.f, 0.f, dir * 1.f})
+            )
+        );
+        dir*=-1;
+        scale  = scale == 1.f ? 1.5f : 1.f;
+    }
 }
 void cleanup(GameState* state){
-
+    u32 length = DynamicArray_Length(state->meshRenderers);
+    for(u32 i=0; i < length; i++){
+        destroyMeshRenderer(&state->renderer, &state->meshRenderers[i]);
+    }
 }
 
 int main(){
@@ -53,5 +85,6 @@ int main(){
     Interface.config = config;
     Interface.start = start;
     Interface.update = update;
+    Interface.cleanup = cleanup;
     game_run(Interface);
 }

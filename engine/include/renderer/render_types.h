@@ -44,11 +44,6 @@ typedef struct Renderer{
     VkCommandPool commandPool;
     VkCommandBuffer commandBuffers[MAX_FRAMES_IN_FLIGHT];
 
-    VkBuffer vertexBuffer;
-    VkDeviceMemory vertexBufferMemory;
-
-    VkBuffer indexBuffer;
-    VkDeviceMemory indexBufferMemory;
 
     VkImage depthImage;
     VkDeviceMemory depthImageMemory;
@@ -96,7 +91,6 @@ typedef struct SwapChainSupportDetails{
 }SwapChainSupportDetails;
 
 typedef struct UniformBufferObject {
-    Mat4 model;
     Mat4 view;
     Mat4 proj;
 }UniformBufferObject;

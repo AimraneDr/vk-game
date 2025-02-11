@@ -61,6 +61,10 @@ VkPresentModeKHR chooseSeapChainPresentMode(VkPresentModeKHR *modes, u32 modes_c
         {
             return modes[i];
         }
+        if (modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
+        {
+            return modes[i];
+        }
     }
     return VK_PRESENT_MODE_FIFO_KHR;
 }

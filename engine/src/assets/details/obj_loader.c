@@ -2,10 +2,12 @@
 #include "math/mathTypes.h"
 #include "core/files.h"
 #include "core/debugger.h"
+#include "meshTypes.h"
 #include <stdlib.h>
 #include <string.h>
 #include <string/str.h>
 #include <math/mathUtils.h>
+
 
 #define TINYOBJ_LOADER_C_IMPLEMENTATION
 #include <TinyObjLoader/tiny_obj_loader_c.h>

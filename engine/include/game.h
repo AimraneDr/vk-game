@@ -7,6 +7,7 @@
 #include "renderer/render_types.h"
 #include "core/input.h"
 #include "core/clock.h"
+#include "components/meshRendererComponent.h"
 #include "components/cameraComponent.h"
 #include "assets/asset_types.h"
 #include <string/str_types.h>
@@ -41,6 +42,8 @@ typedef struct GameState{
 
     //components
     Camera_Component camera;
+
+    MeshRenderer_Component* meshRenderers;
 }GameState;
 
 typedef struct GameInterface_t{

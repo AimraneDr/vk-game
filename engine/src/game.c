@@ -8,6 +8,7 @@
 #include "core/input.h"
 #include "assets/asset_manager.h"
 #include <math/mathTypes.h>
+#include <collections/DynamicArray.h>
 
 #include <math/vec3.h>
 
@@ -49,15 +50,15 @@ void game_init(GameConfig config, GameState* out){
     out->camera.orthographicSize = config.camera.orthographicSize;
     out->camera.useOrthographic = config.camera.useOrthographic;
 
-    clock_start(&out->clock);
     init_event_sys();
 
     window_init(info, &out->platform);
     input_system_init(&out->inputer);
     asset_manager_init(&out->assetManager);
 
-    load_asset(&out->assetManager, "./../resources/models/viking_room.obj");
-    renderer_init(&out->renderer, &out->platform, &out->assetManager);
+    renderer_init(&out->renderer, &out->platform);
+
+    out->meshRenderers = DynamicArray_Create(MeshRenderer_Component);
 
     return;
 }
@@ -75,15 +76,21 @@ void game_run(GameInterface Interface){
     //user specific startup
     if(Interface.start) Interface.start(&state);
 
+    clock_start(&state.clock);
     while (!state.platform.display.shouldClose)
     {
         clock_tick(&state.clock);
 
         input_system_update(&state.inputer, state.clock.deltaTime);
-        renderer_draw(&state.camera, &state.renderer, &state.platform, &state.assetManager, state.clock.deltaTime);
-        window_PullEvents(&state.platform);
 
+        renderer_draw(&state.camera, &state.renderer, &state.platform, state.meshRenderers, state.clock.deltaTime);
+        
+        window_PullEvents(&state.platform);
+        
         if(Interface.update) Interface.update(&state);
+        if(is_key_down(&state.inputer, KEY_P)){
+            LOG_DEBUG("%.2f FPS", 1 /state.clock.deltaTime);
+        }
     }
 
     if(Interface.cleanup) Interface.cleanup(&state);
@@ -93,6 +100,8 @@ void game_run(GameInterface Interface){
 }
 
 void game_shutdown(GameState* state){
+
+    DynamicArray_Destroy(state->meshRenderers);
 
     asset_manager_shutdown(&state->assetManager);
     renderer_shutdown(&state->renderer);

@@ -2,6 +2,8 @@
 
 #include "core/debugger.h"
 
+#include <collections/DynamicArray.h>
+
 void createCommandBuffer(VkDevice device, VkCommandPool pool, VkCommandBuffer* out){
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -46,7 +48,7 @@ void endSingleTimeCommands(VkDevice device, VkCommandPool cmdPool, VkQueue queue
     vkFreeCommandBuffers(device, cmdPool, 1, cmdBuffer);
 }
 
-void recordCommandBuffer(VkCommandBuffer commandBuffer, VkPipeline pipeline, VkPipelineLayout pipelineLayout, VkRenderPass renderpass, VkFramebuffer* swapChainFramebuffers, VkExtent2D extent, uint32_t imageIndex, VkBuffer vertexBuffer, VkBuffer indexBuffer, u32 indicesCount, VkDescriptorSet* descriptorSet) {
+void recordCommandBuffer(VkCommandBuffer commandBuffer, VkPipeline pipeline, VkPipelineLayout pipelineLayout, VkRenderPass renderpass, VkFramebuffer* swapChainFramebuffers, VkExtent2D extent, uint32_t imageIndex, VkDescriptorSet* descriptorSet, MeshRenderer_Component* meshRenderers) {
     VkCommandBufferBeginInfo beginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = 0, // Optional
@@ -102,15 +104,25 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, VkPipeline pipeline, VkP
     };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    VkBuffer vertexBuffers[] = {vertexBuffer};
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-    vkCmdBindIndexBuffer(commandBuffer, indexBuffer,0, VK_INDEX_TYPE_UINT32);
-
+    
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, descriptorSet, 0, 0);
-
-    vkCmdDrawIndexed(commandBuffer, indicesCount, 1, 0, 0, 0);
-
+    
+    for(u16 i=0; i< DynamicArray_Length(meshRenderers); i++){
+        MeshRenderer_Component* m = &meshRenderers[i];
+        VkBuffer vertexBuffers[] = { m->renderContext.vertexBuffer};
+        VkDeviceSize offsets[] = {0};
+        vkCmdPushConstants(
+            commandBuffer,
+            pipelineLayout,
+            VK_SHADER_STAGE_VERTEX_BIT,
+            0,
+            sizeof(Mat4),
+            &m->mat4
+        );
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+        vkCmdBindIndexBuffer(commandBuffer, m->renderContext.indexBuffer,0, VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(commandBuffer, m->indicesCount, 1, 0, 0, 0);
+    }
     vkCmdEndRenderPass(commandBuffer);
 
     res = vkEndCommandBuffer(commandBuffer);
