@@ -20,11 +20,15 @@ void GameInitConfigSetDefaults(GameConfig* config);
 
 void game_init(GameConfig config, GameState* out){
     // init platform
-    out->name = str_new(config.display.title.val);
+    out->name = str_new(config.platform.title.val);
     PlatformInitConfig info = {
         .display = {
-            .w = config.display.width,
-            .h = config.display.height
+            .x = config.platform.display.x,
+            .y = config.platform.display.y,
+            .w = config.platform.display.w,
+            .h = config.platform.display.h,
+            .resizable = config.platform.display.resizable,
+            .startState = config.platform.display.startState,
         },
         .title = out->name
     };
@@ -56,7 +60,7 @@ void game_init(GameConfig config, GameState* out){
     input_system_init(&out->inputer);
     asset_manager_init(&out->assetManager);
 
-    renderer_init(&out->renderer, &out->platform);
+    renderer_init(config.renderer, &out->renderer, &out->platform);
 
     out->meshRenderers = DynamicArray_Create(MeshRenderer_Component);
 
@@ -83,7 +87,7 @@ void game_run(GameInterface Interface){
 
         input_system_update(&state.inputer, state.clock.deltaTime);
 
-        renderer_draw(&state.camera, &state.renderer, &state.platform, state.meshRenderers, state.clock.deltaTime);
+        renderer_draw(&state.camera, &state.renderer, &state.platform, state.meshRenderers, state.clock.deltaTime, &state.uiManager);
         
         window_PullEvents(&state.platform);
         
@@ -108,17 +112,19 @@ void game_shutdown(GameState* state){
     window_destroy(&state->platform);
 
     shutdown_event_sys();
+    str_free(&state->platform.display.title);
     return;
 }
 
 
 void GameInitConfigSetDefaults(GameConfig* config) {
     GameConfig base = {
-        .display = {
-            .height = 500,
-            .width = 750,
-            .MaximizeAtStart = false,
-            .resizable = true,
+        .platform = {
+            .display = {
+                .h = 500,
+                .w = 750,
+                .startState = WINDOW_STATE_FLOATING,
+            },
             .title = str_new("game")
         },
         .camera = {
@@ -132,14 +138,17 @@ void GameInitConfigSetDefaults(GameConfig* config) {
         }
     };
     // Set display defaults
-    if (config->display.title.len == 0) {
-        config->display.title = str_new(base.display.title.val);
+    if (config->platform.title.len == 0) {
+        config->platform.title = str_new(base.platform.title.val);
     }
-    if (config->display.width == 0) {
-        config->display.width = base.display.width;
+    if (config->platform.display.w == 0) {
+        config->platform.display.w = base.platform.display.w;
     }
-    if (config->display.height == 0) {
-        config->display.height = base.display.height;
+    if (config->platform.display.h == 0) {
+        config->platform.display.h = base.platform.display.h;
+    }
+    if (config->platform.display.startState == WINDOW_STATE_NULL) {
+        config->platform.display.startState = base.platform.display.startState;
     }
     if (config->camera.pos.x == 0.0f && config->camera.pos.y == 0.0f && config->camera.pos.z == 0.0f) {
         config->camera.pos = (Vec3){base.camera.pos.x, base.camera.pos.y, base.camera.pos.z};

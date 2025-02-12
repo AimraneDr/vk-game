@@ -20,22 +20,25 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             break;;
         case WM_SIZE:
             if (wParam == SIZE_MINIMIZED) {
-                state->display.visibility = Minimized;
+                state->display.visibility = WINDOW_STATE_MINIMIZED;
                 emit_event(EVENT_TYPE_WINDOW_MINIMIZED,(EventContext){0}, state);
+                LOG_DEBUG("WM_SIZE SIZE_MINIMIZED !");
             } else if(wParam == SIZE_MAXIMIZED){
                 state->display.width = LOWORD(lParam);
                 state->display.height = HIWORD(lParam);
-                state->display.visibility = Maximized;
+                state->display.visibility = WINDOW_STATE_MAXIMIZED;
                 emit_event(EVENT_TYPE_WINDOW_MAXIMIZED, (EventContext){0}, state);
+                LOG_DEBUG("WM_SIZE SIZE_MAXIMIZED !");
             } else {
                 state->display.width = LOWORD(lParam);
                 state->display.height = HIWORD(lParam);
-                state->display.visibility = Floating;
+                state->display.visibility = WINDOW_STATE_FLOATING;
                 EventContext context = {
                     .u32[0] = state->display.width,
                     .u32[1] = state->display.height,
                 };
                 emit_event(EVENT_TYPE_WINDOW_RESIZE_SET, context, state);
+                LOG_DEBUG("WM_SIZE unknown !");
             }
             break;;
         case WM_SIZING:
@@ -45,6 +48,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                     .u32[1] = state->display.height
                 };
                 emit_event(EVENT_TYPE_WINDOW_RESIZING,context, state);   
+            
+                LOG_DEBUG("WM_SIZING !");
             break;
         case WM_EXITSIZEMOVE:
             if(state->display.isResizing){
@@ -55,6 +60,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 };
                 emit_event(EVENT_TYPE_WINDOW_RESIZED,context, state);  
             }
+            LOG_DEBUG("WM_EXITSIZEMOVE !");
             break;
         
         //Keyboard
@@ -148,12 +154,54 @@ void window_init(PlatformInitConfig info, PlatformState* out) {
 
     RegisterClass(&wc);
 
+    // Calculate window position
+    u32 windowX = info.display.x;
+    u32 windowY = info.display.y;
+    
+    // Get screen dimensions for position calculations
+    i32 screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    i32 screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+      // Handle X position
+      switch (windowX) {
+        case WINDOW_START_POSITION_RANDOM:
+            windowX = CW_USEDEFAULT;
+            break;
+        case WINDOW_START_POSITION_END:
+            windowX = screenWidth - info.display.w;
+            break;
+        case WINDOW_START_POSITION_CENTER:
+            windowX = (screenWidth - info.display.w) / 2;
+            break;
+    }
+
+    // Handle Y position
+    switch (windowY) {
+        case WINDOW_START_POSITION_RANDOM:
+            windowY = CW_USEDEFAULT;
+            break;
+        case WINDOW_START_POSITION_END:
+            windowY = screenHeight - info.display.h;
+            break;
+        case WINDOW_START_POSITION_CENTER:
+            windowY = (screenHeight - info.display.h) / 2;
+            break;
+    }
+
+    DWORD windowStyle = WS_OVERLAPPED | WS_MINIMIZEBOX;
+    if (info.display.resizable && info.display.startState != WINDOW_STATE_FULL_SCREEN) {
+        windowStyle |= WS_MAXIMIZEBOX | WS_THICKFRAME;
+    }
+    if (info.display.startState != WINDOW_STATE_FULL_SCREEN) {
+        windowStyle |= WS_SYSMENU | WS_CAPTION;
+    }
+
     HWND hwnd = CreateWindowEx(
         0,
         "GameWindowClass",
         info.title.val,
-        WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, info.display.w, info.display.h,
+        windowStyle,
+        windowX, windowY, info.display.w, info.display.h,
         NULL,
         NULL,
         hInstance,
@@ -166,7 +214,27 @@ void window_init(PlatformInitConfig info, PlatformState* out) {
     }
 
     SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)out);
-    ShowWindow(hwnd, SW_SHOW);
+
+    // Set initial window state
+    int cmdShow = SW_SHOW;
+    switch (info.display.startState) {
+        case WINDOW_STATE_FULL_SCREEN:
+            cmdShow = SW_MAXIMIZE;
+            SetWindowLong(hwnd, GWL_STYLE, windowStyle | WS_POPUP);
+            SetWindowPos(hwnd, HWND_TOP, 0, 0, screenWidth, screenHeight, SWP_FRAMECHANGED);
+            break;
+        case WINDOW_STATE_MAXIMIZED:
+            cmdShow = SW_MAXIMIZE;
+            break;
+        case WINDOW_STATE_MINIMIZED:
+            cmdShow = SW_MINIMIZE;
+            break;
+        case WINDOW_STATE_FLOATING:
+            cmdShow = SW_SHOW;
+            break;
+    }
+
+    ShowWindow(hwnd, cmdShow);
 
     out->display.hwnd = hwnd;
     out->display.hInstance = hInstance;

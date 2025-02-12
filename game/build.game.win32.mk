@@ -31,7 +31,7 @@ scaffold:
 
 $(EXE_NAME): $(OBJ)
 	@echo building $(EXE_NAME) ...
-	@$(CC) -o $(BUILD_DIR)/$@.exe $^ $(LINKER_FLAGS)
+	@$(CC) $(CFLAGS) -o $(BUILD_DIR)/$@.exe $^ $(LINKER_FLAGS)
 	@echo done.
 
 $(OBJ_DIR)/%.o: ./src/%.c

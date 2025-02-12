@@ -3,6 +3,7 @@
 
 #include "renderer/render_types.h"
 #include "assets/asset_types.h"
+#include "components/UI/ui_types.h"
 #include "components/meshRendererComponent.h"
 
 
@@ -12,14 +13,20 @@ void endSingleTimeCommands(VkDevice device, VkCommandPool cmdPool, VkQueue queue
 
 void recordCommandBuffer(
     VkCommandBuffer commandBuffer, 
-    VkPipeline pipeline, 
-    VkPipelineLayout pipelineLayout, 
+    VkPipeline worldPipeline, 
+    VkPipelineLayout worldPipelineLayout, 
+    VkPipeline uiPipeline, 
+    VkPipelineLayout uiPipelineLayout, 
     VkRenderPass renderpass, 
-    VkFramebuffer* swapChainFramebuffers, 
-    VkExtent2D extent, 
-    uint32_t imageIndex, 
-    VkDescriptorSet* descriptorSet, 
-    MeshRenderer_Component* meshRenderers);
+    VkFramebuffer* swapChainFramebuffers,
+    VkExtent2D extent, uint32_t imageIndex, 
+    VkDescriptorSet* worldDescriptorSet, 
+    VkDescriptorSet* uiDescriptorSet, 
+    MeshRenderer_Component* meshRenderers, // TODO: move to didcated system for the compoennt
+    VkBuffer ui_vertexBuffer,
+    VkBuffer ui_indexBuffer,
+    u32 ui_indicesCount
+);
 
 void destroyCommandBuffer(VkDevice device, VkCommandPool pool, VkCommandBuffer* buff);
 

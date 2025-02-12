@@ -8,18 +8,15 @@
 #include "core/input.h"
 #include "core/clock.h"
 #include "components/meshRendererComponent.h"
+#include "components/UI/ui_types.h"
 #include "components/cameraComponent.h"
 #include "assets/asset_types.h"
 #include <string/str_types.h>
 
 
 typedef struct GameConfig{
-    struct{
-        String title;
-        u16 width, height;
-        bool resizable;
-        bool MaximizeAtStart;
-    }display;
+    PlatformInitConfig platform;
+    
     struct {
         Vec3 pos,rot,scale;
         f32 orthographicSize;
@@ -29,6 +26,7 @@ typedef struct GameConfig{
         bool useOrthographic;
     }camera;
     
+    RendererInitConfig renderer;
 }GameConfig;
 
 typedef struct GameState{
@@ -36,6 +34,7 @@ typedef struct GameState{
     PlatformState platform;
     InputManager inputer;
     AssetManager assetManager;
+    UI_Manager uiManager;
     Renderer renderer;
 
     Clock clock;

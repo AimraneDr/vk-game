@@ -1,6 +1,7 @@
 #include "renderer/details/uniformBuffer.h"
 
 #include <math/vec3.h>
+#include <math/vec2.h>
 #include <math/mathConst.h>
 #include <math/trigonometry.h>
 #include <math/mat.h>
@@ -29,6 +30,24 @@ void createUniformBuffer(VkPhysicalDevice gpu, VkDevice device, VkBuffer* unifor
     }
 }
 
+void UI_createUniformBuffer(VkPhysicalDevice gpu, VkDevice device, VkBuffer* uniformBuffers, VkDeviceMemory* buffersMems, void** mappedBuffs){
+    VkDeviceSize bufferSize = sizeof(UI_UniformBufferObject);
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        createBuffer(
+            gpu,
+            device,
+            bufferSize, 
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+            &(uniformBuffers[i]), 
+            &(buffersMems[i])
+        );
+
+        vkMapMemory(device, buffersMems[i], 0, bufferSize, 0, &(mappedBuffs[i]));
+    }
+}
+
 void destroyUniformBuffer(VkDevice device, VkBuffer uniformBuffers[], VkDeviceMemory buffersMems[]){
      for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroyBuffer(device, uniformBuffers[i], 0);
@@ -37,10 +56,6 @@ void destroyUniformBuffer(VkDevice device, VkBuffer uniformBuffers[], VkDeviceMe
 }
 
 void updateUniformBuffer(uint32_t currentImage, Vec2 frameSize, void** uniformBuffersMapped, f64 deltatime, Camera_Component* camera) {
-    static Vec3 cameraPos = (Vec3){1,2,2};
-    // cameraPos.z += time* 0.01;
-    static f32 turnSpeed = 1.f;
-    // camera->transform.rotation.x-=deltatime*turnSpeed;
 
     camera_updateViewMat(camera);
     camera_updateProjectionMat(camera, frameSize);
@@ -49,5 +64,21 @@ void updateUniformBuffer(uint32_t currentImage, Vec2 frameSize, void** uniformBu
     ubo.view = camera->view;
     ubo.proj = camera->projection;
 
+    memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+}
+
+void UI_updateUniformBuffer(uint32_t currentImage, Vec2 frameSize, void** uniformBuffersMapped, f64 deltatime, UI_Manager* uiManager) {
+    UI_UniformBufferObject ubo;
+    
+    // View matrix remains identity for screen-space UI
+    Vec2 virtualCanvas = vec2_new(frameSize.x/uiManager->pixelsPerPoint, frameSize.y/uiManager->pixelsPerPoint);
+    ubo.proj = mat4_orthographic(
+        0.0f, 
+        virtualCanvas.x,  // Left to Right = canvas width
+        virtualCanvas.y,  // Top to Bottom = canvas height (Vulkan Y-down)
+        0.0f, 
+        -1.0f, 
+        1.0f
+    );
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }

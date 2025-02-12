@@ -11,6 +11,7 @@
 #include <collections/DynamicArray.h>
 
 #include <math/trigonometry.h>
+#include <math/vec2.h>
 #include <math/mat.h>
 
 #include <math/vec3.h>
@@ -18,11 +19,13 @@
 
 void config(GameConfig* config){
     
-    config->display.height = 500;
-    config->display.width = 750;
-    config->display.MaximizeAtStart = false;
-    config->display.resizable = true;
-    config->display.title = str_new("My App");
+    config->platform.display.h = 500;
+    config->platform.display.w = 750;
+    config->platform.display.x = WINDOW_START_POSITION_CENTER;
+    config->platform.display.y = WINDOW_START_POSITION_CENTER;
+    config->platform.display.startState = WINDOW_STATE_FLOATING;
+    config->platform.display.resizable = true;
+    config->platform.title = str_new("My App");
     
     config->camera.farPlane = 1000.f;
     config->camera.nearPlane = 0.01f;
@@ -31,9 +34,13 @@ void config(GameConfig* config){
     config->camera.rot = vec3_new(45.f,0.f,0.f);
     config->camera.orthographicSize = 3.f;
     config->camera.useOrthographic = true;
+
+    config->renderer.msaaSamples = 4;
 }
 
 void start(GameState* state){
+    state->uiManager.pixelsPerPoint = 50.f;
+
     Asset a = load_asset(&state->assetManager, "./../resources/models/viking_room.obj");
     Asset a1 = load_asset(&state->assetManager, "./../resources/models/cube.obj");
     MeshRenderer_Component mesh0,mesh1;
@@ -43,6 +50,8 @@ void start(GameState* state){
     DynamicArray_Push(state->meshRenderers, mesh1);
     release_asset(&state->assetManager, &a);
     release_asset(&state->assetManager, &a1);
+
+    LOG_DEBUG("MSAA samples : %d", state->renderer.msaaSamples);
 }
 
 void update(GameState* state){

@@ -34,6 +34,20 @@
 
 #include <collections/DynamicArray.h>
 
+const u16 verticesCount = 4;
+static UI_Vertex ui_vertices[] = {
+    {{.5f,.5f}, {1.f, 1.f}},
+    {{-.5f,.5f}, {0.f, 1.f}},
+    {{-.5f,-.5f}, {0.f, 0.f}},
+    {{.5f,-.5f}, {1.f, 0.f}}
+};
+
+const u16 indicesCount = 6;
+static u32 ui_indices[] = {
+    0,1,2, 2,3,0
+};
+
+
 void renderer_createVulkanInstance(VkInstance *instance);
 void renderer_initDebugMessanger(VkInstance *instance, VkDebugUtilsMessengerEXT *out);
 VkDebugUtilsMessengerCreateInfoEXT getDebugMessangerCreateInfo();
@@ -47,12 +61,12 @@ void onWindowResize(EventType eType, void *sender, void *listener, EventContext 
     ((Renderer *)listener)->framebufferResized = true;
 }
 
-void renderer_init(Renderer *r, PlatformState *p)
+void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p)
 {
-    r->physicalDevice = VK_NULL_HANDLE;
+    r->gpu = VK_NULL_HANDLE;
     r->currentFrame = 0;
     r->framebufferResized = false;
-    r->msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+    r->msaaSamples = config.msaaSamples;
 
     renderer_createVulkanInstance(&r->instance);
     renderer_initDebugMessanger(&r->instance, &r->debugMessanger);
@@ -64,34 +78,47 @@ void renderer_init(Renderer *r, PlatformState *p)
     createSurface(r->instance, &p->display.hInstance, &p->display.hwnd, &r->surface);
 #endif
 
-    selectPhysicalDevice(r->instance, r->surface, &r->physicalDevice, &r->msaaSamples);
-    createLogicalDevice(r->physicalDevice, r->surface, &r->logicalDevice, &r->graphicsQueue, &r->presentQueue);
-    createSwapChain(r->physicalDevice, r->logicalDevice, r->surface, p->display.width, p->display.height, &r->swapchain, &r->swapchainImages, &r->swapchainImagesCount, &r->swapchainImageFormat, &r->swapchainExtent);
+    selectPhysicalDevice(r->instance, r->surface, &r->gpu, &r->msaaSamples);
+    createLogicalDevice(r->gpu, r->surface, &r->device, &r->queue.graphics, &r->queue.present);
+    createSwapChain(r->gpu, r->device, r->surface, p->display.width, p->display.height, &r->swapchain, &r->swapchainImages, &r->swapchainImagesCount, &r->swapchainImageFormat, &r->swapchainExtent);
 
     r->swapchainImageViews = (VkImageView *)malloc(sizeof(VkImageView) * r->swapchainImagesCount);
-    createSwapChainImageViews(r->logicalDevice, r->swapchainImages, r->swapchainImagesCount, r->swapchainImageFormat, r->swapchainImageViews);
+    createSwapChainImageViews(r->device, r->swapchainImages, r->swapchainImagesCount, r->swapchainImageFormat, r->swapchainImageViews);
 
-    createRenderPass(r->physicalDevice, r->logicalDevice, r->swapchainImageFormat, r->msaaSamples, &r->renderPass);
-    createDescriptorSetLayout(r->logicalDevice, &r->descriptorSetLayout);
-    createPipeline(r->logicalDevice, "shaders/default/vert.spv", "shaders/default/frag.spv", r->swapchainExtent, r->msaaSamples, r->renderPass, r->descriptorSetLayout, &r->pipelineLayout, &r->graphicsPipeline);
+    createRenderPass(r->gpu, r->device, r->swapchainImageFormat, r->msaaSamples, &r->renderPass);
 
-    createCommandPool(r->physicalDevice, r->logicalDevice, r->surface, &r->commandPool);
+    //3d world pipeline
+    createDescriptorSetLayout(r->device, &r->world.descriptorSetLayout);
+    createPipeline(r->device, "shaders/default/vert.spv", "shaders/default/frag.spv", r->swapchainExtent, r->msaaSamples, r->renderPass, r->world.descriptorSetLayout, &r->world.pipelineLayout, &r->world.graphicsPipeline);
+    
+    //UI pipeline
+    UI_createDescriptorSetLayout(r->device, &r->ui.descriptorSetLayout);
+    UI_createPipeline(r->device, "shaders/default/ui.vert.spv", "shaders/default/ui.frag.spv", r->swapchainExtent, r->msaaSamples, r->renderPass, r->ui.descriptorSetLayout, &r->ui.pipelineLayout, &r->ui.graphicsPipeline);
+    
+    createCommandPool(r->gpu, r->device, r->surface, &r->commandPool);
 
-    createColorResources(r->physicalDevice, r->logicalDevice, r->commandPool, r->graphicsQueue, r->swapchainExtent, r->msaaSamples, r->swapchainImageFormat, &r->colorImage, &r->colorImageMemory, &r->colorImageView);
-    createDepthResources(r->physicalDevice, r->logicalDevice, r->commandPool, r->graphicsQueue, r->swapchainExtent, r->msaaSamples, &r->depthImage, &r->depthImageMemory, &r->depthImageView);
-    createFramebuffers(r->logicalDevice, r->renderPass, r->swapchainImageViews, r->colorImageView, r->depthImageView, r->swapchainImagesCount, r->swapchainExtent, &r->shwapchainFrameBuffers);
+    createColorResources(r->gpu, r->device, r->commandPool, r->queue.graphics, r->swapchainExtent, r->msaaSamples, r->swapchainImageFormat, &r->attachments.color.image, &r->attachments.color.memory, &r->attachments.color.view);
+    createDepthResources(r->gpu, r->device, r->commandPool, r->queue.graphics, r->swapchainExtent, r->msaaSamples, &r->attachments.depth.image, &r->attachments.depth.memory, &r->attachments.depth.view);
+    createFramebuffers(r->device, r->renderPass, r->swapchainImageViews, r->attachments.color.view, r->attachments.depth.view, r->swapchainImagesCount, r->swapchainExtent, &r->swapchainFrameBuffers);
 
-    createTextureImage(r->physicalDevice, r->logicalDevice, r->commandPool, r->graphicsQueue, &r->mipLevels, &r->textureImage, &r->textureImageMemory);
-    createTextureImageView(r->logicalDevice, r->textureImage, r->mipLevels, &r->textureImageView);
-    createTextureImageSampler(r->physicalDevice, r->logicalDevice, r->mipLevels, &r->textureSampler);
+    createTextureImage(r->gpu, r->device, r->commandPool, r->queue.graphics, &r->mipLevels, &r->textureImage, &r->textureImageMemory);
+    createTextureImageView(r->device, r->textureImage, r->mipLevels, &r->textureImageView);
+    createTextureImageSampler(r->gpu, r->device, r->mipLevels, &r->textureSampler);
 
-    createUniformBuffer(r->physicalDevice, r->logicalDevice, r->uniformBuffers, r->uniformBuffersMemory, r->uniformBuffersMapped);
+    createUniformBuffer(r->gpu, r->device, r->world.uniform.buffers, r->world.uniform.buffersMemory, r->world.uniform.buffersMapped);
+    UI_createUniformBuffer(r->gpu, r->device, r->ui.uniform.buffers, r->ui.uniform.buffersMemory, r->ui.uniform.buffersMapped);
 
-    createDescriptorPool(r->logicalDevice, &r->descriptorPool);
-    createDescriptorSets(r->logicalDevice, r->descriptorSetLayout, r->descriptorPool, r->uniformBuffers, r->textureImageView, r->textureSampler, r->descriptorSets);
+    createDescriptorPool(r->device, &r->world.descriptorPool);
+    createDescriptorSets(r->device, r->world.descriptorSetLayout, r->world.descriptorPool, r->world.uniform.buffers, r->textureImageView, r->textureSampler, r->world.descriptorSets);
 
-    createCommandBuffer(r->logicalDevice, r->commandPool, r->commandBuffers);
-    createSyncObjects(r->logicalDevice, r->imageAvailableSemaphores, r->renderFinishedSemaphores, r->inFlightFences);
+    //UI
+    UI_createDescriptorPool(r->device, &r->ui.descriptorPool);
+    UI_createDescriptorSets(r->device, r->ui.descriptorSetLayout, r->ui.descriptorPool, r->ui.uniform.buffers, r->textureImageView, r->textureSampler, r->ui.descriptorSets);
+    createVertexBuffer(r->gpu, r->device, r->queue.graphics, r->commandPool, verticesCount, ui_vertices, &r->ui.vertexBuffer, &r->ui.vertexBufferMemory);
+    createIndexBuffer(r->gpu, r->device, r->queue.graphics, r->commandPool, indicesCount, ui_indices, &r->ui.indexBuffer, &r->ui.indexBufferMemory);
+
+    createCommandBuffer(r->device, r->commandPool, r->commandBuffers);
+    createSyncObjects(r->device, r->sync.imageAvailableSemaphores, r->sync.renderFinishedSemaphores, r->sync.inFlightFences);
 
     // Subscribe to Events
     EventListener onResizeListener = {
@@ -104,40 +131,54 @@ void renderer_init(Renderer *r, PlatformState *p)
 
 void renderer_shutdown(Renderer *r)
 {    
-    vkDeviceWaitIdle(r->logicalDevice);
+    vkDeviceWaitIdle(r->device);
 
-    destroySyncObjects(r->logicalDevice, r->imageAvailableSemaphores, r->renderFinishedSemaphores, r->inFlightFences);
-    destroyUniformBuffer(r->logicalDevice, r->uniformBuffers, r->uniformBuffersMemory);
-    destroyTextureSampler(r->logicalDevice, r->textureSampler);
-    destroyTextureImageView(r->logicalDevice, r->textureImageView);
-    destroyTextureImage(r->logicalDevice, r->textureImage, r->textureImageMemory);
+    destroySyncObjects(r->device, r->sync.imageAvailableSemaphores, r->sync.renderFinishedSemaphores, r->sync.inFlightFences);
     
-    destroyCommandBuffer(r->logicalDevice, r->commandPool, r->commandBuffers);
-    destroyCommandPool(r->logicalDevice, r->commandPool);
-    destroyFramebuffers(r->logicalDevice, r->shwapchainFrameBuffers, r->swapchainImagesCount);
-    destroyDepthResources(r->logicalDevice, r->depthImage, r->depthImageMemory, r->depthImageView);
-    destroyColorResources(r->logicalDevice, r->colorImage, r->colorImageMemory, r->colorImageView);
-    destroyPipeline(r->logicalDevice, &r->graphicsPipeline, r->pipelineLayout);
+    destroyVertexBuffer(r->device, r->ui.vertexBuffer, r->ui.vertexBufferMemory);
+    destroyIndexBuffer(r->device, r->ui.indexBuffer, r->ui.indexBufferMemory);
 
-    destroyDescriptorPool(r->logicalDevice, r->descriptorPool);
-    destroyDescriptorSetLayout(r->logicalDevice, r->descriptorSetLayout);
+    destroyUniformBuffer(r->device, r->ui.uniform.buffers, r->ui.uniform.buffersMemory);
+    destroyUniformBuffer(r->device, r->world.uniform.buffers, r->world.uniform.buffersMemory);
+    
+    destroyTextureSampler(r->device, r->textureSampler);
+    destroyTextureImageView(r->device, r->textureImageView);
+    destroyTextureImage(r->device, r->textureImage, r->textureImageMemory);
+    
+    destroyCommandBuffer(r->device, r->commandPool, r->commandBuffers);
+    destroyCommandPool(r->device, r->commandPool);
+    destroyFramebuffers(r->device, r->swapchainFrameBuffers, r->swapchainImagesCount);
+    destroyDepthResources(r->device, r->attachments.depth.image, r->attachments.depth.memory, r->attachments.depth.view);
+    destroyColorResources(r->device, r->attachments.color.image, r->attachments.color.memory, r->attachments.color.view);
+    destroyPipeline(r->device, &r->world.graphicsPipeline, r->world.pipelineLayout);
+    destroyPipeline(r->device, &r->ui.graphicsPipeline, r->ui.pipelineLayout);
 
-    destroyRenderPass(r->logicalDevice, r->renderPass);
-    destroySwapChainImageViews(r->logicalDevice, r->swapchainImageViews, r->swapchainImagesCount);
-    destroySwapChain(r->logicalDevice, r->swapchain);
-    destroyLogicalDevice(r->logicalDevice);
+    destroyDescriptorPool(r->device, r->world.descriptorPool);
+    destroyDescriptorPool(r->device, r->ui.descriptorPool);
+    destroyDescriptorSetLayout(r->device, r->world.descriptorSetLayout);
+    destroyDescriptorSetLayout(r->device, r->ui.descriptorSetLayout);
+
+    destroyRenderPass(r->device, r->renderPass);
+    destroySwapChainImageViews(r->device, r->swapchainImageViews, r->swapchainImagesCount);
+    destroySwapChain(r->device, r->swapchain);
+    destroyLogicalDevice(r->device);
     destroySurface(r->instance, r->surface);
     renderer_destroyDebugMessanger(r->instance, r->debugMessanger);
     vkDestroyInstance(r->instance, 0);
     return;
 };
 
-void renderer_draw(Camera_Component *camera, Renderer *r, PlatformState *p, MeshRenderer_Component* meshRenderers, f64 deltatime)
+void renderer_draw(
+    Camera_Component *camera, 
+    Renderer *r, PlatformState *p, 
+    MeshRenderer_Component* meshRenderers, f64 deltatime,
+    UI_Manager* uiManager
+)
 {
-    vkWaitForFences(r->logicalDevice, 1, &r->inFlightFences[r->currentFrame], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(r->device, 1, &r->sync.inFlightFences[r->currentFrame], VK_TRUE, UINT64_MAX);
     
     u32 imageIndex;
-    VkResult res = vkAcquireNextImageKHR(r->logicalDevice, r->swapchain, UINT64_MAX, r->imageAvailableSemaphores[r->currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult res = vkAcquireNextImageKHR(r->device, r->swapchain, UINT64_MAX, r->sync.imageAvailableSemaphores[r->currentFrame], VK_NULL_HANDLE, &imageIndex);
     if (res == VK_ERROR_OUT_OF_DATE_KHR)
     {
         recreateSwapChainObject(r, p->display.width, p->display.height, p->display.visibility);
@@ -148,26 +189,31 @@ void renderer_draw(Camera_Component *camera, Renderer *r, PlatformState *p, Mesh
         LOG_FATAL("failed to acquire swap chain image!");
         return;
     }
-    vkResetFences(r->logicalDevice, 1, &r->inFlightFences[r->currentFrame]);
+    vkResetFences(r->device, 1, &r->sync.inFlightFences[r->currentFrame]);
     vkResetCommandBuffer(r->commandBuffers[r->currentFrame], 0);
 
-    updateUniformBuffer(r->currentFrame, (Vec2){p->display.width, p->display.height}, r->uniformBuffersMapped, deltatime, camera);
+    updateUniformBuffer(r->currentFrame, (Vec2){p->display.width, p->display.height}, r->world.uniform.buffersMapped, deltatime, camera);
+    UI_updateUniformBuffer(r->currentFrame, (Vec2){p->display.width, p->display.height}, r->ui.uniform.buffersMapped, deltatime, uiManager);
     
     recordCommandBuffer(
         r->commandBuffers[r->currentFrame], 
-        r->graphicsPipeline, 
-        r->pipelineLayout, 
+        r->world.graphicsPipeline, 
+        r->world.pipelineLayout, 
+        r->ui.graphicsPipeline, 
+        r->ui.pipelineLayout, 
         r->renderPass, 
-        r->shwapchainFrameBuffers, 
+        r->swapchainFrameBuffers, 
         r->swapchainExtent, 
         imageIndex, 
-        &r->descriptorSets[r->currentFrame],
-        meshRenderers
+        &r->world.descriptorSets[r->currentFrame],
+        &r->ui.descriptorSets[r->currentFrame],
+        meshRenderers,
+        r->ui.vertexBuffer, r->ui.indexBuffer, indicesCount
     );
 
-    VkSemaphore waitSemaphores[] = {r->imageAvailableSemaphores[r->currentFrame]};
+    VkSemaphore waitSemaphores[] = {r->sync.imageAvailableSemaphores[r->currentFrame]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    VkSemaphore signalSemaphores[] = {r->renderFinishedSemaphores[r->currentFrame]};
+    VkSemaphore signalSemaphores[] = {r->sync.renderFinishedSemaphores[r->currentFrame]};
 
     VkSubmitInfo submitInfo = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -179,7 +225,7 @@ void renderer_draw(Camera_Component *camera, Renderer *r, PlatformState *p, Mesh
         .signalSemaphoreCount = 1,
         .pSignalSemaphores = signalSemaphores};
 
-    if (vkQueueSubmit(r->graphicsQueue, 1, &submitInfo, r->inFlightFences[r->currentFrame]) != VK_SUCCESS)
+    if (vkQueueSubmit(r->queue.graphics, 1, &submitInfo, r->sync.inFlightFences[r->currentFrame]) != VK_SUCCESS)
     {
         LOG_FATAL("failed to submit draw command buffer!");
         return;
@@ -196,7 +242,7 @@ void renderer_draw(Camera_Component *camera, Renderer *r, PlatformState *p, Mesh
         .pImageIndices = &imageIndex,
         .pResults = 0};
 
-    res = vkQueuePresentKHR(r->presentQueue, &presentInfo);
+    res = vkQueuePresentKHR(r->queue.present, &presentInfo);
     if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || r->framebufferResized)
     {
         r->framebufferResized = false;
@@ -220,7 +266,7 @@ void renderer_createVulkanInstance(VkInstance *instance)
         .pEngineName = "internal engine",
         .apiVersion = VK_API_VERSION_1_3};
 
-    // Horrible way to get the required extensions, but a fix is comming
+    // FIXME: Horrible way to get the required extensions, but fix it later
     u32 ext_count = 0;
     vkEnumerateInstanceExtensionProperties(0, &ext_count, 0);
 
@@ -244,8 +290,8 @@ void renderer_createVulkanInstance(VkInstance *instance)
         .pApplicationInfo = &appInof,
         .enabledExtensionCount = ext_count,
         .ppEnabledExtensionNames = ext_names,
-        .enabledLayerCount = validationLayersCount(),
-        .ppEnabledLayerNames = validationLayersNames(),
+        .enabledLayerCount = isValidationLayersEnabled() ? validationLayersCount() : 0,
+        .ppEnabledLayerNames = isValidationLayersEnabled() ? validationLayersNames() : 0,
         .pNext = isValidationLayersEnabled() ? &debugMessangerInfo : 0};
 
     VkResult res = vkCreateInstance(&info, 0, instance);
@@ -260,6 +306,7 @@ void renderer_createVulkanInstance(VkInstance *instance)
         LOG_FATAL("failed to create vulkan instance !");
         return;
     }
+    LOG_DEBUG("Vulkan instance created successfully");
     return;
 }
 
@@ -331,22 +378,22 @@ void renderer_destroyDebugMessanger(VkInstance instance, VkDebugUtilsMessengerEX
 
 void recreateSwapChainObject(Renderer *r, u32 width, u32 height, WindowState visibility)
 {
-    if (visibility == Minimized)
+    if (visibility == WINDOW_STATE_MINIMIZED)
     {
         return;
     }
-    vkDeviceWaitIdle(r->logicalDevice);
+    vkDeviceWaitIdle(r->device);
 
-    destroyFramebuffers(r->logicalDevice, r->shwapchainFrameBuffers, r->swapchainImagesCount);
-    destroyDepthResources(r->logicalDevice, r->depthImage,r->depthImageMemory, r->depthImageView);
-    destroyColorResources(r->logicalDevice, r->colorImage, r->colorImageMemory, r->colorImageView);
-    destroySwapChainImageViews(r->logicalDevice, r->swapchainImageViews, r->swapchainImagesCount);
-    destroySwapChain(r->logicalDevice, r->swapchain);
+    destroyFramebuffers(r->device, r->swapchainFrameBuffers, r->swapchainImagesCount);
+    destroyDepthResources(r->device, r->attachments.depth.image,r->attachments.depth.memory, r->attachments.depth.view);
+    destroyColorResources(r->device, r->attachments.color.image,r->attachments.color.memory, r->attachments.color.view);
+    destroySwapChainImageViews(r->device, r->swapchainImageViews, r->swapchainImagesCount);
+    destroySwapChain(r->device, r->swapchain);
 
-    createSwapChain(r->physicalDevice, r->logicalDevice, r->surface, width, height, &r->swapchain, &r->swapchainImages, &r->swapchainImagesCount, &r->swapchainImageFormat, &r->swapchainExtent);
+    createSwapChain(r->gpu, r->device, r->surface, width, height, &r->swapchain, &r->swapchainImages, &r->swapchainImagesCount, &r->swapchainImageFormat, &r->swapchainExtent);
     r->swapchainImageViews = (VkImageView *)malloc(sizeof(VkImageView) * r->swapchainImagesCount);
-    createSwapChainImageViews(r->logicalDevice, r->swapchainImages, r->swapchainImagesCount, r->swapchainImageFormat, r->swapchainImageViews);
-    createColorResources(r->physicalDevice, r->logicalDevice, r->commandPool, r->graphicsQueue, r->swapchainExtent, r->msaaSamples, r->swapchainImageFormat, &r->colorImage, &r->colorImageMemory, &r->colorImageView);
-    createDepthResources(r->physicalDevice, r->logicalDevice, r->commandPool, r->graphicsQueue, r->swapchainExtent, r->msaaSamples, &r->depthImage, &r->depthImageMemory, &r->depthImageView);
-    createFramebuffers(r->logicalDevice, r->renderPass, r->swapchainImageViews, r->colorImageView, r->depthImageView, r->swapchainImagesCount, r->swapchainExtent, &r->shwapchainFrameBuffers);
+    createSwapChainImageViews(r->device, r->swapchainImages, r->swapchainImagesCount, r->swapchainImageFormat, r->swapchainImageViews);
+    createColorResources(r->gpu, r->device, r->commandPool, r->queue.graphics, r->swapchainExtent, r->msaaSamples, r->swapchainImageFormat, &r->attachments.color.image, &r->attachments.color.memory, &r->attachments.color.view);
+    createDepthResources(r->gpu, r->device, r->commandPool, r->queue.graphics, r->swapchainExtent, r->msaaSamples, &r->attachments.depth.image, &r->attachments.depth.memory, &r->attachments.depth.view);
+    createFramebuffers(r->device, r->renderPass, r->swapchainImageViews, r->attachments.color.view, r->attachments.depth.view, r->swapchainImagesCount, r->swapchainExtent, &r->swapchainFrameBuffers);
 }

@@ -147,7 +147,6 @@ bool createSwapChain(
         LOG_FATAL("Failed to create swapchain");
         return FALSE;
     }
-    LOG_DEBUG("Swapchain created successfully");
 
     *out_extent = extent;
     *out_format = surfaceFormat.format;

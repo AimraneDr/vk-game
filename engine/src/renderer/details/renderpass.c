@@ -26,7 +26,7 @@ void createRenderPass(VkPhysicalDevice gpu, VkDevice device, VkFormat swapchain_
         .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     };
 
-    VkAttachmentDescription colorAttachmentResolve = {
+    VkAttachmentDescription colorResolveAttachment = {
         .format = swapchain_image_format,
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -37,30 +37,41 @@ void createRenderPass(VkPhysicalDevice gpu, VkDevice device, VkFormat swapchain_
         .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
     };
 
-    VkAttachmentReference colorAttachmentRef = {
+    VkAttachmentReference worldColorAttachmentRef = {
         .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     };
 
-    VkAttachmentReference depthAttachmentRef = {
+    VkAttachmentReference worldDepthAttachmentRef = {
         .attachment = 1,
         .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     };
 
-    VkAttachmentReference colorAttachmentResolveRef = {
+    VkSubpassDescription worldSubpass = {
+        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &worldColorAttachmentRef,
+        .pDepthStencilAttachment = &worldDepthAttachmentRef,
+        .pResolveAttachments = 0
+    };
+
+    VkAttachmentReference uiColorAttachmentRef = {
+        .attachment = 0,
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    };
+    VkAttachmentReference uiColorResolveAttachmentRef = {
         .attachment = 2,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     };
-
-    VkSubpassDescription subpass = {
+    VkSubpassDescription uiSubpass = {
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .colorAttachmentCount = 1,
-        .pColorAttachments = &colorAttachmentRef,
-        .pDepthStencilAttachment = &depthAttachmentRef,
-        .pResolveAttachments = &colorAttachmentResolveRef
+        .pColorAttachments = &uiColorAttachmentRef,
+        .pDepthStencilAttachment = 0,
+        .pResolveAttachments = &uiColorResolveAttachmentRef
     };
 
-    VkSubpassDependency dependency = {
+    VkSubpassDependency dependency0 = {
         .srcSubpass = VK_SUBPASS_EXTERNAL,
         .dstSubpass = 0,
         .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
@@ -69,17 +80,45 @@ void createRenderPass(VkPhysicalDevice gpu, VkDevice device, VkFormat swapchain_
         .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
     };
 
+    // Ensure that world-subpass writes are finished before ui-subpass begins.
+    VkSubpassDependency dependency1 = {
+        .srcSubpass = 0,
+        .dstSubpass = 1,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
+        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+    };
+
+    // Transition from ui-subpass to external (presentation)
+    VkSubpassDependency dependency2 = {
+        .srcSubpass = 1,
+        .dstSubpass = VK_SUBPASS_EXTERNAL,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        .dstAccessMask = 0,
+        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+    };
+
     const u8 attachmentsCount = 3;
-    VkAttachmentDescription attachements[attachmentsCount] = {colorAttachment, depthAttachment, colorAttachmentResolve};
+    VkAttachmentDescription attachements[attachmentsCount] = {colorAttachment, depthAttachment, colorResolveAttachment};
     
+    const u8 subpassesCount = 2;
+    VkSubpassDescription subpasses[] = {worldSubpass, uiSubpass};
+
+    const u8 dependanciesCount = 3;
+    VkSubpassDependency dependancies[] = {dependency0, dependency1,dependency2};
+
     VkRenderPassCreateInfo renderPassInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .attachmentCount = attachmentsCount,
         .pAttachments = attachements,
-        .subpassCount = 1,
-        .pSubpasses = &subpass,
-        .dependencyCount = 1,
-        .pDependencies = &dependency
+        .subpassCount = subpassesCount,
+        .pSubpasses = subpasses,
+        .dependencyCount = dependanciesCount,
+        .pDependencies = dependancies
     };
 
     VkResult res = vkCreateRenderPass(device, &renderPassInfo, 0, out_render_pass);

@@ -48,7 +48,23 @@ void endSingleTimeCommands(VkDevice device, VkCommandPool cmdPool, VkQueue queue
     vkFreeCommandBuffers(device, cmdPool, 1, cmdBuffer);
 }
 
-void recordCommandBuffer(VkCommandBuffer commandBuffer, VkPipeline pipeline, VkPipelineLayout pipelineLayout, VkRenderPass renderpass, VkFramebuffer* swapChainFramebuffers, VkExtent2D extent, uint32_t imageIndex, VkDescriptorSet* descriptorSet, MeshRenderer_Component* meshRenderers) {
+void recordCommandBuffer(
+    VkCommandBuffer commandBuffer, 
+    VkPipeline worldPipeline, 
+    VkPipelineLayout worldPipelineLayout, 
+    VkPipeline uiPipeline, 
+    VkPipelineLayout uiPipelineLayout, 
+    VkRenderPass renderpass, 
+    VkFramebuffer* swapChainFramebuffers,
+    VkExtent2D extent, uint32_t imageIndex, 
+    VkDescriptorSet* worldDescriptorSet, 
+    VkDescriptorSet* uiDescriptorSet, 
+    MeshRenderer_Component* meshRenderers,
+    VkBuffer ui_vertexBuffer,
+    VkBuffer ui_indexBuffer,
+    u32 ui_indicesCount
+) 
+{
     VkCommandBufferBeginInfo beginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = 0, // Optional
@@ -86,8 +102,7 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, VkPipeline pipeline, VkP
 
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-
+    
     VkViewport viewport = {
         .x = 0.0f,
         .y = 0.0f,
@@ -97,15 +112,17 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, VkPipeline pipeline, VkP
         .maxDepth = 1.0f
     };
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
+    
     VkRect2D scissor = {
         .offset = {0, 0},
         .extent = extent
     };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
     
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, descriptorSet, 0, 0);
+    
+    //World pipeline
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, worldPipeline);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, worldPipelineLayout, 0, 1, worldDescriptorSet, 0, 0);
     
     for(u16 i=0; i< DynamicArray_Length(meshRenderers); i++){
         MeshRenderer_Component* m = &meshRenderers[i];
@@ -113,7 +130,7 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, VkPipeline pipeline, VkP
         VkDeviceSize offsets[] = {0};
         vkCmdPushConstants(
             commandBuffer,
-            pipelineLayout,
+            worldPipelineLayout,
             VK_SHADER_STAGE_VERTEX_BIT,
             0,
             sizeof(Mat4),
@@ -123,6 +140,18 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, VkPipeline pipeline, VkP
         vkCmdBindIndexBuffer(commandBuffer, m->renderContext.indexBuffer,0, VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexed(commandBuffer, m->indicesCount, 1, 0, 0, 0);
     }
+
+    vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, uiPipeline);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, uiPipelineLayout, 0, 1, uiDescriptorSet, 0, 0);
+    
+    VkBuffer ui_vertexBuffers[] = { ui_vertexBuffer};
+    VkDeviceSize offsets[] = {0};
+
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, ui_vertexBuffers, offsets);
+    vkCmdBindIndexBuffer(commandBuffer, ui_indexBuffer,0, VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(commandBuffer, ui_indicesCount, 1, 0, 0, 0);
+
     vkCmdEndRenderPass(commandBuffer);
 
     res = vkEndCommandBuffer(commandBuffer);

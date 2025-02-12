@@ -27,7 +27,13 @@ void selectPhysicalDevice(const VkInstance instance, const VkSurfaceKHR surface,
         if (evaluatePhysicalDevice(gpus[i], surface))
         {
             *out = gpus[i];
-            *outMsaaSamples = getMaxUsableSampleCount(gpus[i]);
+            if(*outMsaaSamples == 0){
+                *outMsaaSamples = getMaxUsableSampleCount(gpus[i]);
+            }else{
+                if( *outMsaaSamples == 1) (*outMsaaSamples)++;
+                VkSampleCountFlagBits max = getMaxUsableSampleCount(gpus[i]);
+                if(max < *outMsaaSamples)   *outMsaaSamples = max;
+            }
             break;
         }
     }
@@ -38,6 +44,9 @@ void selectPhysicalDevice(const VkInstance instance, const VkSurfaceKHR surface,
         LOG_FATAL("Physical device does not meet the minimum requirements.");
         return;
     }
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(*out, &properties);
+    LOG_DEBUG("Physical Device selected successfully [%s]", properties.deviceName);
 }
 
 bool checkDeviceExtensionsSupport(VkPhysicalDevice device)

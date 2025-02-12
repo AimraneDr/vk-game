@@ -9,6 +9,13 @@ void createPipeline(
     VkExtent2D extent, VkSampleCountFlagBits msaaSamples, 
     VkRenderPass renderpass, VkDescriptorSetLayout descriptorSetLayout, 
     VkPipelineLayout* out_layout, VkPipeline* out_pipeline);
+
+void UI_createPipeline(
+    VkDevice device, 
+    const char* vertshadername, const char* fragshadername,
+    VkExtent2D extent, VkSampleCountFlagBits msaaSamples, 
+    VkRenderPass renderpass, VkDescriptorSetLayout descriptorSetLayout, 
+    VkPipelineLayout* out_layout, VkPipeline* out_pipeline);
 void destroyPipeline(VkDevice device, VkPipeline* pipeline, VkPipelineLayout layout);
 
 #endif //PIPELINE_H

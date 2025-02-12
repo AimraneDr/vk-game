@@ -16,13 +16,6 @@
 
 #endif
 
-typedef struct PlatformInitConfig{
-    struct {
-        u32 w,h;
-    } display;
-    String title;
-}PlatformInitConfig;
-
 #ifdef __linux__
 typedef struct DisplayProps{
     Atom wmDeleteWindow;
@@ -30,10 +23,29 @@ typedef struct DisplayProps{
 #endif
 
 typedef enum WindowState{
-    Maximized,
-    Minimized,
-    Floating
+    WINDOW_STATE_NULL,
+    WINDOW_STATE_FULL_SCREEN,
+    WINDOW_STATE_MAXIMIZED,
+    WINDOW_STATE_FLOATING,
+    WINDOW_STATE_MINIMIZED
 }WindowState;
+
+typedef enum WindowStartPosition_e{
+    WINDOW_START_POSITION_RANDOM = -1,
+    WINDOW_START_POSITION_CENTER = -2,
+    WINDOW_START_POSITION_END = -3,
+    WINDOW_START_POSITION_START = 0,
+}WindowStartPosition;
+
+typedef struct PlatformInitConfig{
+    struct {
+        u32 w,h;
+        i32 x,y;
+        bool resizable;
+        WindowState startState;
+    } display;
+    String title;
+}PlatformInitConfig;
 
 typedef struct PlatformState{
     struct Window{
