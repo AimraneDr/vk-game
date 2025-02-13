@@ -55,12 +55,18 @@ void start(GameState* state){
     Transform2D containerTransform = {
         .position = {5.f, 3.f},
         .scale = {1.f, 1.5f},
-        .rotation = 45.f
+        .rotation = 90.f
     };
     UI_Style containerStyle = {0};
     ui_createRootElement(&state->uiManager);
-    UI_Element container = ui_create_container(&state->uiManager.root, containerTransform, containerStyle, &state->renderer);
-    ui_appendChild(&state->uiManager.root, &container);
+    UI_Element* c1 = ui_create_container(&state->uiManager.root, containerTransform, containerStyle, &state->renderer);
+    containerTransform.position = vec2_new(3, 5);
+    UI_Element* c2 = ui_create_container(c1, containerTransform, containerStyle, &state->renderer);
+
+    containerTransform.position = vec2_new(2, 2);
+    ui_create_container(c2, containerTransform, containerStyle, &state->renderer);
+    containerTransform.position = vec2_new(7, 2);
+    ui_create_container(c2, containerTransform, containerStyle, &state->renderer);
 }
 
 void update(GameState* state){
@@ -91,13 +97,15 @@ void update(GameState* state){
         scale  = scale == 1.f ? 1.5f : 1.f;
     }
 
-    state->uiManager.root.children[0].transform.rotation+=deg_to_rad(45.0f) * state->clock.deltaTime;
+    state->uiManager.root.children[0].transform.rotation+= 45.0f * state->clock.deltaTime;
 }
 void cleanup(GameState* state){
     u32 length = DynamicArray_Length(state->meshRenderers);
     for(u32 i=0; i < length; i++){
         destroyMeshRenderer(&state->renderer, &state->meshRenderers[i]);
     }
+
+    ui_destroyElement(&state->uiManager.root, &state->renderer);
 }
 
 int main(){

@@ -1,11 +1,10 @@
-#include "components/UI/details/container.h"
+#include "components/UI/uiComponents.h"
 
 #include "meshTypes.h"
 
 #include "renderer/details/vertexBuffer.h"
 #include "renderer/details/indexBuffer.h"
 
-#include <collections/DynamicArray.h>
 
 const u16 verticesCount = 4;
 static const UI_Vertex ui_vertices[] = {
@@ -20,15 +19,11 @@ static const u32 ui_indices[] = {
     0,1,2, 2,3,0
 };
 
-UI_Element ui_create_container(UI_Element* parent, Transform2D transform, UI_Style style, Renderer* r){
-    UI_Element new = {0};
-    new.parent = parent;
-    new.transform.position = transform.position;
-    new.transform.scale = transform.scale;
-    new.transform.rotation = transform.rotation;
-    new.children = DynamicArray_Create(UI_Element);
+UI_Element* ui_create_container(UI_Element* parent, Transform2D transform, UI_Style style, Renderer* r){
+    
+    UI_Element* new = ui_createElement(parent, transform, style);
 
-    new.renderer.indicesCount = indicesCount;
+    new->renderer.indicesCount = indicesCount;
 
     createVertexBuffer(
         r->gpu,
@@ -36,8 +31,8 @@ UI_Element ui_create_container(UI_Element* parent, Transform2D transform, UI_Sty
         r->queue.graphics,
         r->commandPool,
         verticesCount, ui_vertices, sizeof(UI_Vertex),
-        &new.renderer.vertexBuffer,
-        &new.renderer.vertexBufferMemory
+        &new->renderer.vertexBuffer,
+        &new->renderer.vertexBufferMemory
     );
     createIndexBuffer(
         r->gpu,
@@ -45,8 +40,8 @@ UI_Element ui_create_container(UI_Element* parent, Transform2D transform, UI_Sty
         r->queue.graphics,
         r->commandPool,
         indicesCount, ui_indices,
-        &new.renderer.indexBuffer,
-        &new.renderer.indexBufferMemory
+        &new->renderer.indexBuffer,
+        &new->renderer.indexBufferMemory
     );
     return new;
 }

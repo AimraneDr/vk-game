@@ -46,7 +46,7 @@ typedef struct UI_Element_t{
     Transform2D transform;
 
     UI_Style style;
-    u32 zOrder;             // Render order priority
+    u32 order;             // Render order priority
 
     
 
