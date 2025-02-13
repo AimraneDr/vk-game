@@ -3,9 +3,9 @@
 #include "core/debugger.h"
 
 static const u8 bindingsCount = 2;
-static const u8 ui_bindingsCount = 2;
+static const u8 ui_bindingsCount = 3;
 
-void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out){
+void PBR_createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out){
     VkDescriptorSetLayoutBinding uboLayoutBinding = {
         .binding = 0,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -36,22 +36,28 @@ void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out){
 }
 
 void UI_createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out){
-    VkDescriptorSetLayoutBinding uboLayoutBinding = {
+    VkDescriptorSetLayoutBinding global_uboLayoutBinding = {
         .binding = 0,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
         .pImmutableSamplers = 0
     };
-    VkDescriptorSetLayoutBinding samplerLayoutBinding = {
+    VkDescriptorSetLayoutBinding element_uboLayoutBinding = {
         .binding = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+    };
+    VkDescriptorSetLayoutBinding samplerLayoutBinding = {
+        .binding = 2,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .pImmutableSamplers = 0,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
     };
 
-    VkDescriptorSetLayoutBinding bindings[ui_bindingsCount] = {uboLayoutBinding, samplerLayoutBinding};
+    VkDescriptorSetLayoutBinding bindings[ui_bindingsCount] = {global_uboLayoutBinding, element_uboLayoutBinding, samplerLayoutBinding};
 
     VkDescriptorSetLayoutCreateInfo layoutInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -69,7 +75,7 @@ void destroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descripto
         vkDestroyDescriptorSetLayout(device, descriptorSetLayout, 0);
 }
 
-void createDescriptorPool(VkDevice device, VkDescriptorPool* out){
+void PBR_createDescriptorPool(VkDevice device, VkDescriptorPool* out){
     VkDescriptorPoolSize poolSizes[bindingsCount] = {
         //0
         {
@@ -105,6 +111,11 @@ void UI_createDescriptorPool(VkDevice device, VkDescriptorPool* out){
         },
         //1
         {
+            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = MAX_FRAMES_IN_FLIGHT
+        },
+        //2
+        {
             .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .descriptorCount = MAX_FRAMES_IN_FLIGHT
         }
@@ -127,7 +138,7 @@ void destroyDescriptorPool(VkDevice device, VkDescriptorPool pool){
     vkDestroyDescriptorPool(device,pool,0);
 }
 
-void createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDescriptorPool pool, VkBuffer* uniformBuffers, VkImageView textureImageView, VkSampler textureSampler, VkDescriptorSet* outDescriptorSets){
+void PBR_createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDescriptorPool pool, VkBuffer* uniformBuffers, VkImageView textureImageView, VkSampler textureSampler, VkDescriptorSet* outDescriptorSets){
     VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = {setLayout,setLayout};
     VkDescriptorSetAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -177,8 +188,22 @@ void createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDe
 
 }
 
-void UI_createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDescriptorPool pool, VkBuffer* uniformBuffers, VkImageView textureImageView, VkSampler textureSampler, VkDescriptorSet* outDescriptorSets){
-    VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = {setLayout,setLayout};
+void UI_createDescriptorSets(
+    VkDevice device, 
+    VkDescriptorSetLayout setLayout, 
+    VkDescriptorPool pool, 
+    VkBuffer* globalUniformBuffers, 
+    VkBuffer* elementUniformBuffers,
+    VkDeviceSize elementAlignedUboSize,
+    VkImageView textureImageView, 
+    VkSampler textureSampler, 
+    VkDescriptorSet* outDescriptorSets)
+{
+    VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT];
+    for(uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        layouts[i] = setLayout;
+    }
+
     VkDescriptorSetAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .descriptorPool = pool,
@@ -192,10 +217,15 @@ void UI_createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, V
     }
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        VkDescriptorBufferInfo bufferInfo = {
-            .buffer = uniformBuffers[i],
+        VkDescriptorBufferInfo globalBufferInfo = {
+            .buffer = globalUniformBuffers[i],
             .offset = 0,
             .range = sizeof(UI_Global_UBO)
+        };
+        VkDescriptorBufferInfo elementBufferInfo = {
+            .buffer = elementUniformBuffers[i],
+            .offset = 0,
+            .range = elementAlignedUboSize
         };
         VkDescriptorImageInfo imageInfo = {
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -210,12 +240,21 @@ void UI_createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, V
             .dstArrayElement = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .descriptorCount = 1,
-            .pBufferInfo = &bufferInfo
+            .pBufferInfo = &globalBufferInfo
         };
         descriptorWrites[1] = (VkWriteDescriptorSet){
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = outDescriptorSets[i],
             .dstBinding = 1,
+            .dstArrayElement = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            .descriptorCount = 1,
+            .pBufferInfo = &elementBufferInfo
+        };
+        descriptorWrites[2] = (VkWriteDescriptorSet){
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = outDescriptorSets[i],
+            .dstBinding = 2,
             .dstArrayElement = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .descriptorCount = 1,
@@ -224,5 +263,4 @@ void UI_createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, V
 
         vkUpdateDescriptorSets(device, ui_bindingsCount, descriptorWrites, 0, 0);
     }
-
 }

@@ -106,7 +106,6 @@ void game_run(GameInterface Interface){
         if(!state.suspended){
             clock_tick(&state.clock);
             
-            input_system_update(&state.inputer, state.clock.deltaTime);
             renderer_draw(&state.camera, &state.renderer, &state.platform, state.meshRenderers, state.clock.deltaTime, &state.uiManager);
             
             if(Interface.update) Interface.update(&state);
@@ -114,6 +113,7 @@ void game_run(GameInterface Interface){
                 LOG_DEBUG("%.2f FPS", 1 /state.clock.deltaTime);
             }
         }
+        input_system_update(&state.inputer, state.clock.deltaTime);
         window_PullEvents(&state.platform);
     }
 

@@ -91,9 +91,17 @@ typedef struct Renderer{
         VkPipeline graphicsPipeline;
         
         struct{
-            VkBuffer buffers[MAX_FRAMES_IN_FLIGHT];
-            VkDeviceMemory buffersMemory[MAX_FRAMES_IN_FLIGHT];
-            void* buffersMapped[MAX_FRAMES_IN_FLIGHT];
+            struct{
+                VkBuffer buffers[MAX_FRAMES_IN_FLIGHT];
+                VkDeviceMemory buffersMemory[MAX_FRAMES_IN_FLIGHT];
+                void* buffersMapped[MAX_FRAMES_IN_FLIGHT];
+            }global;
+            struct{
+                VkBuffer buffers[MAX_FRAMES_IN_FLIGHT];
+                VkDeviceMemory buffersMemory[MAX_FRAMES_IN_FLIGHT];
+                void* buffersMapped[MAX_FRAMES_IN_FLIGHT];
+                VkDeviceSize alignedUboSize;
+            }element;
         }uniform;
     }ui;
 
@@ -141,7 +149,7 @@ typedef struct UI_Global_UBO_t {
 }UI_Global_UBO;
 
 typedef struct UI_Element_UBO_t {
-
+    Vec4 color;
 }UI_Element_UBO;
 
 typedef struct UI_PushConstant_t{

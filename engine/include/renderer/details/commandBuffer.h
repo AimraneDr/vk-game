@@ -21,9 +21,12 @@ void recordCommandBuffer(
     VkFramebuffer* swapChainFramebuffers,
     VkExtent2D extent, uint32_t imageIndex, 
     VkDescriptorSet* worldDescriptorSet, 
-    VkDescriptorSet* uiDescriptorSet, 
-    MeshRenderer* meshRenderers, // TODO: move to didcated system for the compoennt
-    UI_Manager* uiManager   //move to didicated system
+    VkDescriptorSet* uiDescriptorSet,
+    void* uiElementUniformBufferMapped,
+    VkDeviceSize alignedUboSize,
+    MeshRenderer* meshRenderers,
+    UI_Manager* uiManager,
+    f64 deltatime
 );
 
 void destroyCommandBuffer(VkDevice device, VkCommandPool pool, VkCommandBuffer* buff);

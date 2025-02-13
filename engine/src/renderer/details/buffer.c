@@ -5,7 +5,15 @@
 #include "renderer/details/commandBuffer.h"
 
 
-void createBuffer(VkPhysicalDevice gpu, VkDevice device, u32 size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProperties, VkBuffer* outBuff, VkDeviceMemory* buffMem){
+void createBuffer(
+    VkPhysicalDevice gpu, 
+    VkDevice device, 
+    u32 size, 
+    VkBufferUsageFlags usageFlags, 
+    VkMemoryPropertyFlags memProperties, 
+    VkBuffer* outBuff, 
+    VkDeviceMemory* buffMem)
+{
     VkBufferCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = size,

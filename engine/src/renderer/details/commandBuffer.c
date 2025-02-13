@@ -1,5 +1,6 @@
 #include "renderer/details/commandBuffer.h"
 
+#include "renderer/details/uniformBuffer.h"
 #include "core/debugger.h"
 #include "components/UI/uiComponents.h"
 #include <collections/DynamicArray.h>
@@ -49,7 +50,7 @@ void endSingleTimeCommands(VkDevice device, VkCommandPool cmdPool, VkQueue queue
     vkFreeCommandBuffers(device, cmdPool, 1, cmdBuffer);
 }
 
-void recursiveUIElementsDraw(VkCommandBuffer commandBuffer, VkPipelineLayout layout ,UI_Element* root) {
+void recursiveUIElementsDraw(VkCommandBuffer commandBuffer, void* uniformBufferMapped, VkDeviceSize alignedUboSize, f64 deltatime, VkPipelineLayout layout, VkDescriptorSet set,UI_Element* root, u32 elementCounter) {
     for(u32 i=0; i<ui_elementChildrenCount(root); i++){
         VkBuffer ui_vertexBuffers[] = { root->children[i].renderer.vertexBuffer};
         VkDeviceSize offsets[] = {0};
@@ -59,7 +60,6 @@ void recursiveUIElementsDraw(VkCommandBuffer commandBuffer, VkPipelineLayout lay
         UI_PushConstant pc = {
             .model = mat3_to_mat4(root->children[i].transform.mat)
         };
-
         vkCmdPushConstants(
             commandBuffer, 
             layout, 
@@ -67,10 +67,16 @@ void recursiveUIElementsDraw(VkCommandBuffer commandBuffer, VkPipelineLayout lay
             sizeof(UI_PushConstant),
             &pc);
 
+        
+        u32 dynamicOffset = elementCounter * alignedUboSize;
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, set, 1, &dynamicOffset);
+
+        UI_updateElementUniformBuffer(uniformBufferMapped, deltatime, &root->children[i],elementCounter++, alignedUboSize);
+
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, ui_vertexBuffers, offsets);
         vkCmdBindIndexBuffer(commandBuffer, root->children[i].renderer.indexBuffer,0, VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexed(commandBuffer, root->children[i].renderer.indicesCount, 1, 0, 0, 0);
-        recursiveUIElementsDraw(commandBuffer, layout, &root->children[i]);
+        recursiveUIElementsDraw(commandBuffer, uniformBufferMapped, alignedUboSize, deltatime, layout, set, &root->children[i], elementCounter);
     }
 };
 
@@ -84,9 +90,12 @@ void recordCommandBuffer(
     VkFramebuffer* swapChainFramebuffers,
     VkExtent2D extent, uint32_t imageIndex, 
     VkDescriptorSet* worldDescriptorSet, 
-    VkDescriptorSet* uiDescriptorSet, 
+    VkDescriptorSet* uiDescriptorSet,
+    void* uiElementUniformBufferMapped,
+    VkDeviceSize alignedUboSize,
     MeshRenderer* meshRenderers,
-    UI_Manager* uiManager
+    UI_Manager* uiManager,
+    f64 deltatime
 ) 
 {
     VkCommandBufferBeginInfo beginInfo = {
@@ -170,9 +179,10 @@ void recordCommandBuffer(
 
     vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, uiPipeline);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, uiPipelineLayout, 0, 1, uiDescriptorSet, 0, 0);
+    
+    //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, uiPipelineLayout, 0, 1, uiDescriptorSet, 0, 0);
 
-    recursiveUIElementsDraw(commandBuffer, uiPipelineLayout, &uiManager->root);
+    recursiveUIElementsDraw(commandBuffer, uiElementUniformBufferMapped, alignedUboSize, deltatime, uiPipelineLayout, uiDescriptorSet, &uiManager->root, 0);
 
     vkCmdEndRenderPass(commandBuffer);
 

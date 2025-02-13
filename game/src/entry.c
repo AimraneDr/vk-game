@@ -13,6 +13,7 @@
 
 #include <math/trigonometry.h>
 #include <math/vec2.h>
+#include <math/vec4.h>
 #include <math/mat.h>
 
 #include <math/vec3.h>
@@ -60,15 +61,20 @@ void start(GameState* state){
         .rotation = 90.f,
         .pivot = {.5f ,.5f}
     };
-    UI_Style containerStyle = {0};
+    UI_Style containerStyle = {
+        .background.color = vec4_new(1,0,0,1)
+    };
     ui_createRootElement(&state->uiManager);
     UI_Element* c1 = ui_create_container(&state->uiManager.root, containerTransform, containerStyle, &state->renderer);
     containerTransform.position = vec2_new(3, 5);
+    containerStyle.background.color = vec4_new(0,1,0,1);
     UI_Element* c2 = ui_create_container(c1, containerTransform, containerStyle, &state->renderer);
 
     containerTransform.position = vec2_new(2, 2);
+    containerStyle.background.color = vec4_new(0,0,1,1);
     ui_create_container(c2, containerTransform, containerStyle, &state->renderer);
     containerTransform.position = vec2_new(7, 2);
+    containerStyle.background.color = vec4_new(0,0,1,1);
     ui_create_container(c2, containerTransform, containerStyle, &state->renderer);
 }
 

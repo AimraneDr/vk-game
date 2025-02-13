@@ -73,7 +73,7 @@ void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p)
     createRenderPass(r->gpu, r->device, r->swapchainImageFormat, r->msaaSamples, &r->renderPass);
 
     //3d world pipeline
-    createDescriptorSetLayout(r->device, &r->world.descriptorSetLayout);
+    PBR_createDescriptorSetLayout(r->device, &r->world.descriptorSetLayout);
     createPipeline(r->device, "shaders/default/vert.spv", "shaders/default/frag.spv", r->swapchainExtent, r->msaaSamples, r->renderPass, r->world.descriptorSetLayout, &r->world.pipelineLayout, &r->world.graphicsPipeline);
     
     //UI pipeline
@@ -90,15 +90,27 @@ void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p)
     createTextureImageView(r->device, r->textureImage, r->mipLevels, &r->textureImageView);
     createTextureImageSampler(r->gpu, r->device, r->mipLevels, &r->textureSampler);
 
-    createUniformBuffer(r->gpu, r->device, r->world.uniform.buffers, r->world.uniform.buffersMemory, r->world.uniform.buffersMapped);
-    UI_createUniformBuffer(r->gpu, r->device, r->ui.uniform.buffers, r->ui.uniform.buffersMemory, r->ui.uniform.buffersMapped);
+    PBR_createUniformBuffers(r->gpu, r->device, r->world.uniform.buffers, r->world.uniform.buffersMemory, r->world.uniform.buffersMapped);
 
-    createDescriptorPool(r->device, &r->world.descriptorPool);
-    createDescriptorSets(r->device, r->world.descriptorSetLayout, r->world.descriptorPool, r->world.uniform.buffers, r->textureImageView, r->textureSampler, r->world.descriptorSets);
+    UI_createUniformBuffers(r->gpu, r->device, sizeof(UI_Global_UBO), r->ui.uniform.global.buffers, r->ui.uniform.global.buffersMemory, r->ui.uniform.global.buffersMapped);
+    UI_createDynamicOffsetUniformBuffers(r->gpu, r->device, sizeof(UI_Element_UBO), r->ui.uniform.element.buffers, r->ui.uniform.element.buffersMemory, r->ui.uniform.element.buffersMapped, &r->ui.uniform.element.alignedUboSize);
+
+    PBR_createDescriptorPool(r->device, &r->world.descriptorPool);
+    PBR_createDescriptorSets(r->device, r->world.descriptorSetLayout, r->world.descriptorPool, r->world.uniform.buffers, r->textureImageView, r->textureSampler, r->world.descriptorSets);
 
     //UI
     UI_createDescriptorPool(r->device, &r->ui.descriptorPool);
-    UI_createDescriptorSets(r->device, r->ui.descriptorSetLayout, r->ui.descriptorPool, r->ui.uniform.buffers, r->textureImageView, r->textureSampler, r->ui.descriptorSets);
+    UI_createDescriptorSets(
+        r->device, 
+        r->ui.descriptorSetLayout, 
+        r->ui.descriptorPool, 
+        r->ui.uniform.global.buffers, 
+        r->ui.uniform.element.buffers,
+        r->ui.uniform.element.alignedUboSize, 
+        r->textureImageView, 
+        r->textureSampler, 
+        r->ui.descriptorSets
+    );
 
     createCommandBuffer(r->device, r->commandPool, r->commandBuffers);
     createSyncObjects(r->device, r->sync.imageAvailableSemaphores, r->sync.renderFinishedSemaphores, r->sync.inFlightFences);
@@ -118,8 +130,9 @@ void renderer_shutdown(Renderer *r)
 
     destroySyncObjects(r->device, r->sync.imageAvailableSemaphores, r->sync.renderFinishedSemaphores, r->sync.inFlightFences);
 
-    destroyUniformBuffer(r->device, r->ui.uniform.buffers, r->ui.uniform.buffersMemory);
-    destroyUniformBuffer(r->device, r->world.uniform.buffers, r->world.uniform.buffersMemory);
+    destroyUniformBuffers(r->device, r->ui.uniform.global.buffers, r->ui.uniform.global.buffersMemory);
+    destroyUniformBuffers(r->device, r->ui.uniform.element.buffers, r->ui.uniform.element.buffersMemory);
+    destroyUniformBuffers(r->device, r->world.uniform.buffers, r->world.uniform.buffersMemory);
     
     destroyTextureSampler(r->device, r->textureSampler);
     destroyTextureImageView(r->device, r->textureImageView);
@@ -173,8 +186,8 @@ void renderer_draw(
     vkResetCommandBuffer(r->commandBuffers[r->currentFrame], 0);
 
     //TODO: conditionally update when needed
-    updateUniformBuffer(r->currentFrame, (Vec2){p->display.width, p->display.height}, r->world.uniform.buffersMapped, deltatime, camera);
-    UI_updateUniformBuffer(r->currentFrame, (Vec2){p->display.width, p->display.height}, r->ui.uniform.buffersMapped, deltatime, uiManager);
+    PBR_updateGlobalUniformBuffer(r->currentFrame, (Vec2){p->display.width, p->display.height}, r->world.uniform.buffersMapped, deltatime, camera);
+    UI_updateGlobalUniformBuffer(r->currentFrame, (Vec2){p->display.width, p->display.height}, r->ui.uniform.global.buffersMapped, deltatime, uiManager);
     
     recordCommandBuffer(
         r->commandBuffers[r->currentFrame], 
@@ -188,8 +201,11 @@ void renderer_draw(
         imageIndex, 
         &r->world.descriptorSets[r->currentFrame],
         &r->ui.descriptorSets[r->currentFrame],
+        r->ui.uniform.element.buffersMapped[r->currentFrame],
+        r->ui.uniform.element.alignedUboSize,
         meshRenderers,
-        uiManager
+        uiManager,
+        deltatime
     );
 
     VkSemaphore waitSemaphores[] = {r->sync.imageAvailableSemaphores[r->currentFrame]};
