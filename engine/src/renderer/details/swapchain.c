@@ -71,7 +71,7 @@ VkPresentModeKHR chooseSeapChainPresentMode(VkPresentModeKHR *modes, u32 modes_c
 
 VkExtent2D chooseSeapChainExtent(const VkSurfaceCapabilitiesKHR capabilities, u32 window_w, u32 window_h)
 {
-    if (capabilities.currentExtent.height != UINT32_MAX)
+    if (capabilities.currentExtent.height != U32_MAX)
     {
         return capabilities.currentExtent;
     }

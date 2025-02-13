@@ -145,7 +145,7 @@ void createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDe
         VkDescriptorBufferInfo bufferInfo = {
             .buffer = uniformBuffers[i],
             .offset = 0,
-            .range = sizeof(UniformBufferObject)
+            .range = sizeof(PBR_GLOBAL_UBO)
         };
         VkDescriptorImageInfo imageInfo = {
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -195,7 +195,7 @@ void UI_createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, V
         VkDescriptorBufferInfo bufferInfo = {
             .buffer = uniformBuffers[i],
             .offset = 0,
-            .range = sizeof(UI_UniformBufferObject)
+            .range = sizeof(UI_Global_UBO)
         };
         VkDescriptorImageInfo imageInfo = {
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

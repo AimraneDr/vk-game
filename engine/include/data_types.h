@@ -2,6 +2,9 @@
 #define DATA_TYPES_H
 //Basic types
 
+#define U64_MAX 0xffffffffffffffffULL
+#define U32_MAX 0xffffffffU
+
 typedef signed char i8;
 typedef signed short i16;
 typedef signed int i32;

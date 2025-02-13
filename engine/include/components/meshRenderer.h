@@ -15,10 +15,11 @@ typedef struct MeshRenderer_Component_t{
         VkDeviceMemory indexBufferMemory;
     }renderContext;
     //model matrix
+    //TODO: already in transform component
     Mat4 mat4;
     u32 indicesCount;
-}MeshRenderer_Component;
+}MeshRenderer;
 
-API void createMeshRenderer(Model* model, Renderer* renderer, MeshRenderer_Component* out);
-API void destroyMeshRenderer(Renderer* renderer, MeshRenderer_Component* meshRenderer);
+API void createMeshRenderer(Model* model, Renderer* renderer, MeshRenderer* out);
+API void destroyMeshRenderer(Renderer* renderer, MeshRenderer* meshRenderer);
 #endif //MESH_RENDERER_COMPONENT_H

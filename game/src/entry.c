@@ -7,7 +7,8 @@
 #include <assets/asset_manager.h>
 #include <core/files.h>
 #include <core/events.h>
-#include <components/meshRendererComponent.h>
+#include <components/meshRenderer.h>
+#include <components/UI/uiComponents.h>
 #include <collections/DynamicArray.h>
 
 #include <math/trigonometry.h>
@@ -23,7 +24,7 @@ void config(GameConfig* config){
     config->platform.display.w = 750;
     config->platform.display.x = WINDOW_START_POSITION_CENTER;
     config->platform.display.y = WINDOW_START_POSITION_CENTER;
-    config->platform.display.startState = WINDOW_STATE_FLOATING;
+    config->platform.display.startState = WINDOW_STATE_FLOATING; //FIXME: WINDOW_STATE_MINIMIZED breaks the renderer;
     config->platform.display.resizable = true;
     config->platform.title = str_new("My App");
     
@@ -43,7 +44,7 @@ void start(GameState* state){
 
     Asset a = load_asset(&state->assetManager, "./../resources/models/viking_room.obj");
     Asset a1 = load_asset(&state->assetManager, "./../resources/models/cube.obj");
-    MeshRenderer_Component mesh0,mesh1;
+    MeshRenderer mesh0,mesh1;
     createMeshRenderer(a.data, &state->renderer, &mesh0);
     createMeshRenderer(a1.data, &state->renderer, &mesh1);
     DynamicArray_Push(state->meshRenderers, mesh0);
@@ -51,7 +52,15 @@ void start(GameState* state){
     release_asset(&state->assetManager, &a);
     release_asset(&state->assetManager, &a1);
 
-    LOG_DEBUG("MSAA samples : %d", state->renderer.msaaSamples);
+    Transform2D containerTransform = {
+        .position = {5.f, 3.f},
+        .scale = {1.f, 1.5f},
+        .rotation = 45.f
+    };
+    UI_Style containerStyle = {0};
+    ui_createRootElement(&state->uiManager);
+    UI_Element container = ui_create_container(&state->uiManager.root, containerTransform, containerStyle, &state->renderer);
+    ui_appendChild(&state->uiManager.root, &container);
 }
 
 void update(GameState* state){
@@ -81,6 +90,8 @@ void update(GameState* state){
         dir*=-1;
         scale  = scale == 1.f ? 1.5f : 1.f;
     }
+
+    state->uiManager.root.children[0].transform.rotation+=deg_to_rad(45.0f) * state->clock.deltaTime;
 }
 void cleanup(GameState* state){
     u32 length = DynamicArray_Length(state->meshRenderers);

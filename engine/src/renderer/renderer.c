@@ -1,9 +1,7 @@
 #include "renderer/renderer.h"
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
-#include <stdint.h>
 
 #include "data_types.h"
 #include "meshTypes.h"
@@ -33,19 +31,6 @@
 #include "core/clock.h"
 
 #include <collections/DynamicArray.h>
-
-const u16 verticesCount = 4;
-static UI_Vertex ui_vertices[] = {
-    {{.5f,.5f}, {1.f, 1.f}},
-    {{-.5f,.5f}, {0.f, 1.f}},
-    {{-.5f,-.5f}, {0.f, 0.f}},
-    {{.5f,-.5f}, {1.f, 0.f}}
-};
-
-const u16 indicesCount = 6;
-static u32 ui_indices[] = {
-    0,1,2, 2,3,0
-};
 
 
 void renderer_createVulkanInstance(VkInstance *instance);
@@ -114,8 +99,6 @@ void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p)
     //UI
     UI_createDescriptorPool(r->device, &r->ui.descriptorPool);
     UI_createDescriptorSets(r->device, r->ui.descriptorSetLayout, r->ui.descriptorPool, r->ui.uniform.buffers, r->textureImageView, r->textureSampler, r->ui.descriptorSets);
-    createVertexBuffer(r->gpu, r->device, r->queue.graphics, r->commandPool, verticesCount, ui_vertices, &r->ui.vertexBuffer, &r->ui.vertexBufferMemory);
-    createIndexBuffer(r->gpu, r->device, r->queue.graphics, r->commandPool, indicesCount, ui_indices, &r->ui.indexBuffer, &r->ui.indexBufferMemory);
 
     createCommandBuffer(r->device, r->commandPool, r->commandBuffers);
     createSyncObjects(r->device, r->sync.imageAvailableSemaphores, r->sync.renderFinishedSemaphores, r->sync.inFlightFences);
@@ -134,9 +117,6 @@ void renderer_shutdown(Renderer *r)
     vkDeviceWaitIdle(r->device);
 
     destroySyncObjects(r->device, r->sync.imageAvailableSemaphores, r->sync.renderFinishedSemaphores, r->sync.inFlightFences);
-    
-    destroyVertexBuffer(r->device, r->ui.vertexBuffer, r->ui.vertexBufferMemory);
-    destroyIndexBuffer(r->device, r->ui.indexBuffer, r->ui.indexBufferMemory);
 
     destroyUniformBuffer(r->device, r->ui.uniform.buffers, r->ui.uniform.buffersMemory);
     destroyUniformBuffer(r->device, r->world.uniform.buffers, r->world.uniform.buffersMemory);
@@ -169,16 +149,16 @@ void renderer_shutdown(Renderer *r)
 };
 
 void renderer_draw(
-    Camera_Component *camera, 
+    Camera *camera, 
     Renderer *r, PlatformState *p, 
-    MeshRenderer_Component* meshRenderers, f64 deltatime,
+    MeshRenderer* meshRenderers, f64 deltatime,
     UI_Manager* uiManager
 )
 {
-    vkWaitForFences(r->device, 1, &r->sync.inFlightFences[r->currentFrame], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(r->device, 1, &r->sync.inFlightFences[r->currentFrame], VK_TRUE, U64_MAX);
     
     u32 imageIndex;
-    VkResult res = vkAcquireNextImageKHR(r->device, r->swapchain, UINT64_MAX, r->sync.imageAvailableSemaphores[r->currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult res = vkAcquireNextImageKHR(r->device, r->swapchain, U64_MAX, r->sync.imageAvailableSemaphores[r->currentFrame], VK_NULL_HANDLE, &imageIndex);
     if (res == VK_ERROR_OUT_OF_DATE_KHR)
     {
         recreateSwapChainObject(r, p->display.width, p->display.height, p->display.visibility);
@@ -192,6 +172,7 @@ void renderer_draw(
     vkResetFences(r->device, 1, &r->sync.inFlightFences[r->currentFrame]);
     vkResetCommandBuffer(r->commandBuffers[r->currentFrame], 0);
 
+    //TODO: conditionally update when needed
     updateUniformBuffer(r->currentFrame, (Vec2){p->display.width, p->display.height}, r->world.uniform.buffersMapped, deltatime, camera);
     UI_updateUniformBuffer(r->currentFrame, (Vec2){p->display.width, p->display.height}, r->ui.uniform.buffersMapped, deltatime, uiManager);
     
@@ -208,7 +189,7 @@ void renderer_draw(
         &r->world.descriptorSets[r->currentFrame],
         &r->ui.descriptorSets[r->currentFrame],
         meshRenderers,
-        r->ui.vertexBuffer, r->ui.indexBuffer, indicesCount
+        uiManager
     );
 
     VkSemaphore waitSemaphores[] = {r->sync.imageAvailableSemaphores[r->currentFrame]};

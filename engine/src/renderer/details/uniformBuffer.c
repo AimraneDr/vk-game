@@ -13,7 +13,7 @@
 
 
 void createUniformBuffer(VkPhysicalDevice gpu, VkDevice device, VkBuffer* uniformBuffers, VkDeviceMemory* buffersMems, void** mappedBuffs){
-    VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+    VkDeviceSize bufferSize = sizeof(PBR_GLOBAL_UBO);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         createBuffer(
@@ -31,7 +31,7 @@ void createUniformBuffer(VkPhysicalDevice gpu, VkDevice device, VkBuffer* unifor
 }
 
 void UI_createUniformBuffer(VkPhysicalDevice gpu, VkDevice device, VkBuffer* uniformBuffers, VkDeviceMemory* buffersMems, void** mappedBuffs){
-    VkDeviceSize bufferSize = sizeof(UI_UniformBufferObject);
+    VkDeviceSize bufferSize = sizeof(UI_Global_UBO);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         createBuffer(
@@ -55,12 +55,12 @@ void destroyUniformBuffer(VkDevice device, VkBuffer uniformBuffers[], VkDeviceMe
     }
 }
 
-void updateUniformBuffer(uint32_t currentImage, Vec2 frameSize, void** uniformBuffersMapped, f64 deltatime, Camera_Component* camera) {
+void updateUniformBuffer(uint32_t currentImage, Vec2 frameSize, void** uniformBuffersMapped, f64 deltatime, Camera* camera) {
 
     camera_updateViewMat(camera);
     camera_updateProjectionMat(camera, frameSize);
 
-    UniformBufferObject ubo;
+    PBR_GLOBAL_UBO ubo;
     ubo.view = camera->view;
     ubo.proj = camera->projection;
 
@@ -68,7 +68,7 @@ void updateUniformBuffer(uint32_t currentImage, Vec2 frameSize, void** uniformBu
 }
 
 void UI_updateUniformBuffer(uint32_t currentImage, Vec2 frameSize, void** uniformBuffersMapped, f64 deltatime, UI_Manager* uiManager) {
-    UI_UniformBufferObject ubo;
+    UI_Global_UBO ubo;
     
     // View matrix remains identity for screen-space UI
     Vec2 virtualCanvas = vec2_new(frameSize.x/uiManager->pixelsPerPoint, frameSize.y/uiManager->pixelsPerPoint);

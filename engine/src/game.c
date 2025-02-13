@@ -62,7 +62,7 @@ void game_init(GameConfig config, GameState* out){
 
     renderer_init(config.renderer, &out->renderer, &out->platform);
 
-    out->meshRenderers = DynamicArray_Create(MeshRenderer_Component);
+    out->meshRenderers = DynamicArray_Create(MeshRenderer);
 
     return;
 }

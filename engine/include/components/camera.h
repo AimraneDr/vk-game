@@ -2,10 +2,10 @@
 #define CAMERA_COMPONENT_H
 
 #include "data_types.h"
-#include "./transformComponent.h"
+#include "./transform.h"
 
 typedef struct Camera_Component_t{
-    Transform_Component transform;
+    Transform transform;
     f32 fieldOfView;
     f32 farPlane;
     f32 nearPlane;
@@ -13,11 +13,11 @@ typedef struct Camera_Component_t{
 
     bool useOrthographic;
     Mat4 view, projection;
-}Camera_Component;
+}Camera;
 
 
-void camera_updateViewMat(Camera_Component* camera);
-void camera_updateProjectionMat(Camera_Component* camera, Vec2 frameExtent);
+void camera_updateViewMat(Camera* camera);
+void camera_updateProjectionMat(Camera* camera, Vec2 frameExtent);
 
 
 #endif //CAMERA_COMPONENT_H

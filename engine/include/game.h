@@ -7,9 +7,9 @@
 #include "renderer/render_types.h"
 #include "core/input.h"
 #include "core/clock.h"
-#include "components/meshRendererComponent.h"
+#include "components/meshRenderer.h"
 #include "components/UI/ui_types.h"
-#include "components/cameraComponent.h"
+#include "components/camera.h"
 #include "assets/asset_types.h"
 #include <string/str_types.h>
 
@@ -40,9 +40,9 @@ typedef struct GameState{
     Clock clock;
 
     //components
-    Camera_Component camera;
+    Camera camera;
 
-    MeshRenderer_Component* meshRenderers;
+    MeshRenderer* meshRenderers;
 }GameState;
 
 typedef struct GameInterface_t{

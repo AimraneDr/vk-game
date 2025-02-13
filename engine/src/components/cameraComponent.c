@@ -1,4 +1,4 @@
-#include "components/cameraComponent.h"
+#include "components/camera.h"
 
 #include "core/debugger.h"
 
@@ -6,7 +6,7 @@
 #include <math/trigonometry.h>
 #include <math/vec3.h>
 
-void camera_updateViewMat(Camera_Component* camera){
+void camera_updateViewMat(Camera* camera){
     Vec3 radRot = vec3_new(
         deg_to_rad(camera->transform.rotation.x),
         deg_to_rad(camera->transform.rotation.y),
@@ -16,7 +16,7 @@ void camera_updateViewMat(Camera_Component* camera){
         camera->transform.position, radRot); 
 }
 
-void camera_updateProjectionMat(Camera_Component* camera, Vec2 frameExtent){
+void camera_updateProjectionMat(Camera* camera, Vec2 frameExtent){
     f32 aspect = (f32)frameExtent.x / (f32)frameExtent.y;
     if (camera->useOrthographic){
         f32 orthoHeight = camera->orthographicSize;

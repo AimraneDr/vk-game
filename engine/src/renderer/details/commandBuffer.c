@@ -1,8 +1,9 @@
 #include "renderer/details/commandBuffer.h"
 
 #include "core/debugger.h"
-
+#include "components/UI/uiComponents.h"
 #include <collections/DynamicArray.h>
+#include <math/mat.h>
 
 void createCommandBuffer(VkDevice device, VkCommandPool pool, VkCommandBuffer* out){
     VkCommandBufferAllocateInfo allocInfo = {};
@@ -48,6 +49,31 @@ void endSingleTimeCommands(VkDevice device, VkCommandPool cmdPool, VkQueue queue
     vkFreeCommandBuffers(device, cmdPool, 1, cmdBuffer);
 }
 
+void recursiveUIElementsDraw(VkCommandBuffer commandBuffer, VkPipelineLayout layout ,UI_Element* root) {
+    for(u32 i=0; i<ui_elementChildrenCount(root); i++){
+        VkBuffer ui_vertexBuffers[] = { root->children[i].renderer.vertexBuffer};
+        VkDeviceSize offsets[] = {0};
+        
+        transform2D_update(&root->children[i].transform);
+
+        UI_PushConstant pc = {
+            .model = mat3_to_mat4(root->children[i].transform.mat)
+        };
+
+        vkCmdPushConstants(
+            commandBuffer, 
+            layout, 
+            VK_SHADER_STAGE_VERTEX_BIT,0,
+            sizeof(UI_PushConstant),
+            &pc);
+
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, ui_vertexBuffers, offsets);
+        vkCmdBindIndexBuffer(commandBuffer, root->children[i].renderer.indexBuffer,0, VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(commandBuffer, root->children[i].renderer.indicesCount, 1, 0, 0, 0);
+        recursiveUIElementsDraw(commandBuffer, layout, &root->children[i]);
+    }
+};
+
 void recordCommandBuffer(
     VkCommandBuffer commandBuffer, 
     VkPipeline worldPipeline, 
@@ -59,10 +85,8 @@ void recordCommandBuffer(
     VkExtent2D extent, uint32_t imageIndex, 
     VkDescriptorSet* worldDescriptorSet, 
     VkDescriptorSet* uiDescriptorSet, 
-    MeshRenderer_Component* meshRenderers,
-    VkBuffer ui_vertexBuffer,
-    VkBuffer ui_indexBuffer,
-    u32 ui_indicesCount
+    MeshRenderer* meshRenderers,
+    UI_Manager* uiManager
 ) 
 {
     VkCommandBufferBeginInfo beginInfo = {
@@ -125,7 +149,10 @@ void recordCommandBuffer(
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, worldPipelineLayout, 0, 1, worldDescriptorSet, 0, 0);
     
     for(u16 i=0; i< DynamicArray_Length(meshRenderers); i++){
-        MeshRenderer_Component* m = &meshRenderers[i];
+        MeshRenderer* m = &meshRenderers[i];
+        PBR_PushConstant pc = {
+            .model = m->mat4
+        };
         VkBuffer vertexBuffers[] = { m->renderContext.vertexBuffer};
         VkDeviceSize offsets[] = {0};
         vkCmdPushConstants(
@@ -133,8 +160,8 @@ void recordCommandBuffer(
             worldPipelineLayout,
             VK_SHADER_STAGE_VERTEX_BIT,
             0,
-            sizeof(Mat4),
-            &m->mat4
+            sizeof(PBR_PushConstant),
+            &pc
         );
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
         vkCmdBindIndexBuffer(commandBuffer, m->renderContext.indexBuffer,0, VK_INDEX_TYPE_UINT32);
@@ -144,13 +171,8 @@ void recordCommandBuffer(
     vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, uiPipeline);
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, uiPipelineLayout, 0, 1, uiDescriptorSet, 0, 0);
-    
-    VkBuffer ui_vertexBuffers[] = { ui_vertexBuffer};
-    VkDeviceSize offsets[] = {0};
 
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, ui_vertexBuffers, offsets);
-    vkCmdBindIndexBuffer(commandBuffer, ui_indexBuffer,0, VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(commandBuffer, ui_indicesCount, 1, 0, 0, 0);
+    recursiveUIElementsDraw(commandBuffer, uiPipelineLayout, &uiManager->root);
 
     vkCmdEndRenderPass(commandBuffer);
 

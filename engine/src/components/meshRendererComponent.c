@@ -1,4 +1,4 @@
-#include "components/meshRendererComponent.h"
+#include "components/meshRenderer.h"
 
 #include "assets/asset_manager.h"
 #include "renderer/details/vertexBuffer.h"
@@ -6,7 +6,7 @@
 
 #include <math/mat.h>
 
-void createMeshRenderer(Model* model, Renderer* renderer, MeshRenderer_Component* out){
+void createMeshRenderer(Model* model, Renderer* renderer, MeshRenderer* out){
     // create buffers
     out->indicesCount = model->index_count;
     out->mat4 = MAT4_IDENTITY;
@@ -17,6 +17,7 @@ void createMeshRenderer(Model* model, Renderer* renderer, MeshRenderer_Component
         renderer->commandPool,
         model->vertex_count,
         model->vertices,
+        sizeof(Vertex),
         &out->renderContext.vertexBuffer,
         &out->renderContext.vertexBufferMemory
     );
@@ -32,7 +33,7 @@ void createMeshRenderer(Model* model, Renderer* renderer, MeshRenderer_Component
     );
 }
 
-void destroyMeshRenderer(Renderer* renderer, MeshRenderer_Component* meshRenderer){
+void destroyMeshRenderer(Renderer* renderer, MeshRenderer* meshRenderer){
     vkDeviceWaitIdle(renderer->device);
     meshRenderer->indicesCount = 0;
     //destroy buffers

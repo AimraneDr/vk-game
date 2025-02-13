@@ -1,12 +1,11 @@
 #include "renderer/details/vertexBuffer.h"
 
-#include "meshTypes.h"
 #include "core/debugger.h"
 #include "renderer/details/buffer.h"
 
 //TODO: needs to be done for each mesh
-void createVertexBuffer(VkPhysicalDevice gpu, VkDevice device, VkQueue queue, VkCommandPool cmdPool, u32 verticesCount, Vertex* vertices, VkBuffer* outBuff, VkDeviceMemory* outMem){
-    u32 buffSize = sizeof(Vertex) * verticesCount;
+void createVertexBuffer(VkPhysicalDevice gpu, VkDevice device, VkQueue queue, VkCommandPool cmdPool, u32 verticesCount, void* vertices, u32 vertexSize, VkBuffer* outBuff, VkDeviceMemory* outMem){
+    u32 buffSize = vertexSize * verticesCount;
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;

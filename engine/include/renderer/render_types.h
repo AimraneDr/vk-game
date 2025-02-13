@@ -95,12 +95,6 @@ typedef struct Renderer{
             VkDeviceMemory buffersMemory[MAX_FRAMES_IN_FLIGHT];
             void* buffersMapped[MAX_FRAMES_IN_FLIGHT];
         }uniform;
-        
-        VkBuffer vertexBuffer;
-        VkDeviceMemory vertexBufferMemory;
-        
-        VkBuffer indexBuffer;
-        VkDeviceMemory indexBufferMemory;
     }ui;
 
     // TODO: move to texture asset/component
@@ -129,13 +123,29 @@ typedef struct SwapChainSupportDetails{
     VkPresentModeKHR* presentModes;
 }SwapChainSupportDetails;
 
-typedef struct UniformBufferObject {
+typedef struct PBR_GLOBAL_UBO_t {
     Mat4 view;
     Mat4 proj;
-}UniformBufferObject;
+}PBR_GLOBAL_UBO;
 
-typedef struct UI_UniformBufferObject {
+typedef struct PBR_Mesh_UBO_t {
+
+}PBR_Mesh_UBO;
+
+typedef struct PBR_PushConstant_t{
+    Mat4 model;
+}PBR_PushConstant;
+
+typedef struct UI_Global_UBO_t {
     Mat4 proj;
-}UI_UniformBufferObject;
+}UI_Global_UBO;
+
+typedef struct UI_Element_UBO_t {
+
+}UI_Element_UBO;
+
+typedef struct UI_PushConstant_t{
+    Mat4 model;
+}UI_PushConstant;
 
 #endif //RENDER_TYPES_H
