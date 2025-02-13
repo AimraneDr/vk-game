@@ -27,6 +27,8 @@ typedef struct GameConfig{
     }camera;
     
     RendererInitConfig renderer;
+
+    bool suspendOnMinimize;
 }GameConfig;
 
 typedef struct GameState{
@@ -43,6 +45,8 @@ typedef struct GameState{
     Camera camera;
 
     MeshRenderer* meshRenderers;
+
+    bool suspended;
 }GameState;
 
 typedef struct GameInterface_t{

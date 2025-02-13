@@ -287,7 +287,6 @@ void renderer_createVulkanInstance(VkInstance *instance)
         LOG_FATAL("failed to create vulkan instance !");
         return;
     }
-    LOG_DEBUG("Vulkan instance created successfully");
     return;
 }
 

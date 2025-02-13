@@ -37,6 +37,8 @@ void config(GameConfig* config){
     config->camera.useOrthographic = true;
 
     config->renderer.msaaSamples = 4;
+
+    config->suspendOnMinimize = true;
 }
 
 void start(GameState* state){
@@ -55,7 +57,8 @@ void start(GameState* state){
     Transform2D containerTransform = {
         .position = {5.f, 3.f},
         .scale = {1.f, 1.5f},
-        .rotation = 90.f
+        .rotation = 90.f,
+        .pivot = {.5f ,.5f}
     };
     UI_Style containerStyle = {0};
     ui_createRootElement(&state->uiManager);

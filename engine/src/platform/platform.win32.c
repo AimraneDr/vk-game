@@ -17,18 +17,23 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             state->display.shouldClose = true;
             PostQuitMessage(0);
             emit_event(EVENT_TYPE_WINDOW_CLOSED, (EventContext){0},state);
-            break;;
+            break;
+        case WM_ACTIVATEAPP:
+            if(wParam){
+                emit_event(EVENT_TYPE_WINDOW_ACTIVATED,(EventContext){0}, state);
+            }else{
+                emit_event(EVENT_TYPE_WINDOW_DEACTIVATED,(EventContext){0}, state);
+            }
+            break;
         case WM_SIZE:
             if (wParam == SIZE_MINIMIZED) {
                 state->display.visibility = WINDOW_STATE_MINIMIZED;
                 emit_event(EVENT_TYPE_WINDOW_MINIMIZED,(EventContext){0}, state);
-                LOG_DEBUG("WM_SIZE SIZE_MINIMIZED !");
             } else if(wParam == SIZE_MAXIMIZED){
                 state->display.width = LOWORD(lParam);
                 state->display.height = HIWORD(lParam);
                 state->display.visibility = WINDOW_STATE_MAXIMIZED;
                 emit_event(EVENT_TYPE_WINDOW_MAXIMIZED, (EventContext){0}, state);
-                LOG_DEBUG("WM_SIZE SIZE_MAXIMIZED !");
             } else {
                 state->display.width = LOWORD(lParam);
                 state->display.height = HIWORD(lParam);
@@ -38,7 +43,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                     .u32[1] = state->display.height,
                 };
                 emit_event(EVENT_TYPE_WINDOW_RESIZE_SET, context, state);
-                LOG_DEBUG("WM_SIZE unknown !");
             }
             break;;
         case WM_SIZING:
@@ -48,8 +52,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                     .u32[1] = state->display.height
                 };
                 emit_event(EVENT_TYPE_WINDOW_RESIZING,context, state);   
-            
-                LOG_DEBUG("WM_SIZING !");
             break;
         case WM_EXITSIZEMOVE:
             if(state->display.isResizing){
@@ -60,7 +62,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 };
                 emit_event(EVENT_TYPE_WINDOW_RESIZED,context, state);  
             }
-            LOG_DEBUG("WM_EXITSIZEMOVE !");
             break;
         
         //Keyboard

@@ -33,8 +33,6 @@ void ui_createRootElement(UI_Manager* manager){
         .scale = {1.f, .1f},
         .rotation = 0.f
     };
-
-    LOG_DEBUG("root element created");
 }
 
 u32 ui_elementChildrenCount(UI_Element* element){

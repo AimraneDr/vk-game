@@ -12,6 +12,15 @@
 
 #include <math/vec3.h>
 
+EVENT_CALLBACK(onMinimize){
+    GameState* state = (GameState*)listener;
+    state->suspended = true;
+}
+
+EVENT_CALLBACK(onActivated){
+    GameState* state = (GameState*)listener;
+    state->suspended = false;
+}
 
 void game_shutdown(GameState* state);
 void GameInitConfigSetDefaults(GameConfig* config);
@@ -74,8 +83,19 @@ void game_run(GameInterface Interface){
     if(Interface.config) Interface.config(&gConfig);
     
     GameInitConfigSetDefaults(&gConfig);
-    
+
+
     game_init(gConfig, &state);
+    
+    if(gConfig.suspendOnMinimize){
+        EventListener listner = {
+            .callback = onMinimize,
+            .listener = &state
+        };
+        subscribe_to_event(EVENT_TYPE_WINDOW_MINIMIZED, &listner);
+        listner.callback = onActivated;
+        subscribe_to_event(EVENT_TYPE_WINDOW_ACTIVATED, &listner);
+    } 
 
     //user specific startup
     if(Interface.start) Interface.start(&state);
@@ -83,18 +103,18 @@ void game_run(GameInterface Interface){
     clock_start(&state.clock);
     while (!state.platform.display.shouldClose)
     {
-        clock_tick(&state.clock);
-
-        input_system_update(&state.inputer, state.clock.deltaTime);
-
-        renderer_draw(&state.camera, &state.renderer, &state.platform, state.meshRenderers, state.clock.deltaTime, &state.uiManager);
-        
-        window_PullEvents(&state.platform);
-        
-        if(Interface.update) Interface.update(&state);
-        if(is_key_down(&state.inputer, KEY_P)){
-            LOG_DEBUG("%.2f FPS", 1 /state.clock.deltaTime);
+        if(!state.suspended){
+            clock_tick(&state.clock);
+            
+            input_system_update(&state.inputer, state.clock.deltaTime);
+            renderer_draw(&state.camera, &state.renderer, &state.platform, state.meshRenderers, state.clock.deltaTime, &state.uiManager);
+            
+            if(Interface.update) Interface.update(&state);
+            if(is_key_down(&state.inputer, KEY_P)){
+                LOG_DEBUG("%.2f FPS", 1 /state.clock.deltaTime);
+            }
         }
+        window_PullEvents(&state.platform);
     }
 
     if(Interface.cleanup) Interface.cleanup(&state);

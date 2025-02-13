@@ -1,7 +1,8 @@
 #include "core/debugger.h"
 #include <stdio.h>
 #include <stdarg.h>
-#include <time.h>
+
+#include "core/clock.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -43,7 +44,7 @@ void logMessage(LogLevel level, const char* message, ...){
     debug.totalMessages++;
     debug.counters[level]++;
 
-    //TODO : Add time when clock sys is ready
+    Time currentT = clock_get_system_time();
 
 #ifdef _WIN32
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -58,7 +59,10 @@ void logMessage(LogLevel level, const char* message, ...){
     SetConsoleTextAttribute(hConsole, logLevelColors[level]);
 
     // Print message
-    printf("[%s]-[%s] : ", "00:00:00.00", logLevelStrings[level]);
+    printf(
+        "[%u:%u:%u.%u]-[%s] : ", 
+        currentT.hours,currentT.minutes,currentT.seconds,currentT.milliseconds, 
+        logLevelStrings[level]);
     vprintf(message, args);
     printf("\n");
 
