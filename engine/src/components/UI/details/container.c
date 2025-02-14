@@ -7,7 +7,7 @@
 
 
 const u16 verticesCount = 4;
-static const UI_Vertex ui_vertices[] = {
+static const Vertex2D ui_vertices[] = {
     {{.5f,.5f}, {1.f, 1.f}},
     {{-.5f,.5f}, {0.f, 1.f}},
     {{-.5f,-.5f}, {0.f, 0.f}},
@@ -19,7 +19,7 @@ static const u32 ui_indices[] = {
     0,1,2, 2,3,0
 };
 
-UI_Element* ui_create_container(UI_Element* parent, Transform2D transform, UI_Style style, Renderer* r){
+UI_Element* ui_create_container(UI_Element* parent, Transform2D transform, UI_Style style, RenderState* r){
     
     UI_Element* new = ui_createElement(parent, transform, style);
 
@@ -30,7 +30,7 @@ UI_Element* ui_create_container(UI_Element* parent, Transform2D transform, UI_St
         r->device,
         r->queue.graphics,
         r->commandPool,
-        verticesCount, ui_vertices, sizeof(UI_Vertex),
+        verticesCount, ui_vertices, sizeof(Vertex2D),
         &new->renderer.vertexBuffer,
         &new->renderer.vertexBufferMemory
     );

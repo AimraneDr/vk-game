@@ -2,7 +2,7 @@
 
 #include "meshTypes.h"
 
-VkVertexInputBindingDescription getVertexInputBindingDescription(){
+VkVertexInputBindingDescription getVertex3DInputBindingDescription(){
     return (VkVertexInputBindingDescription) {
         .binding = 0,
         .stride = sizeof(Vertex),
@@ -10,15 +10,15 @@ VkVertexInputBindingDescription getVertexInputBindingDescription(){
     };
 }
 
-VkVertexInputBindingDescription getUIVertexInputBindingDescription(){
+VkVertexInputBindingDescription getVertex2DInputBindingDescription(){
     return (VkVertexInputBindingDescription) {
         .binding = 0,
-        .stride = sizeof(UI_Vertex),
+        .stride = sizeof(Vertex2D),
         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
     };
 }
 
-void getVertexInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDescription** outAttribDescs){
+void getVertex3DInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDescription** outAttribDescs){
     *outCount = 3;
     *outAttribDescs = (VkVertexInputAttributeDescription*)malloc(sizeof(VkVertexInputAttributeDescription) * (*outCount));
     (*outAttribDescs)[0].binding = 0;
@@ -38,7 +38,7 @@ void getVertexInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDe
     (*outAttribDescs)[2].offset = offsetof(Vertex, texCoord);
 }
 
-void getUIVertexInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDescription** outAttribDescs){
+void getVertex2DInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDescription** outAttribDescs){
     *outCount = 2;
     *outAttribDescs = (VkVertexInputAttributeDescription*)malloc(sizeof(VkVertexInputAttributeDescription) * (*outCount));
     (*outAttribDescs)[0].binding = 0;

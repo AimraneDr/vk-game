@@ -56,7 +56,7 @@ UI_Element* ui_createElement(UI_Element* parent, Transform2D t, UI_Style s){
     return &parent->children[new.order];
 }
 
-void ui_destroyElement(UI_Element* e, Renderer* r){
+void ui_destroyElement(UI_Element* e, RenderState* r){
     // destroy sub childre arrays
     // TODO: make the darray use arenas so destroying all sub elements can be done in one step
     for(i32 i=getChildrenArrayLength(e->children)-1; i >= 0; i--){

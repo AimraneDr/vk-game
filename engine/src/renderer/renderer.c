@@ -39,14 +39,14 @@ VkDebugUtilsMessengerCreateInfoEXT getDebugMessangerCreateInfo();
 
 void renderer_destroyDebugMessanger(VkInstance instance, VkDebugUtilsMessengerEXT messanger);
 
-void recreateSwapChainObject(Renderer *r, u32 width, u32 height, WindowState visibility);
+void recreateSwapChainObject(RenderState *r, u32 width, u32 height, WindowState visibility);
 
 void onWindowResize(EventType eType, void *sender, void *listener, EventContext context)
 {
-    ((Renderer *)listener)->framebufferResized = true;
+    ((RenderState *)listener)->framebufferResized = true;
 }
 
-void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p)
+void renderer_init(RendererInitConfig config, RenderState *r, PlatformState *p)
 {
     r->gpu = VK_NULL_HANDLE;
     r->currentFrame = 0;
@@ -124,7 +124,7 @@ void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p)
     return;
 };
 
-void renderer_shutdown(Renderer *r)
+void renderer_shutdown(RenderState *r)
 {    
     vkDeviceWaitIdle(r->device);
 
@@ -163,7 +163,7 @@ void renderer_shutdown(Renderer *r)
 
 void renderer_draw(
     Camera *camera, 
-    Renderer *r, PlatformState *p, 
+    RenderState *r, PlatformState *p, 
     MeshRenderer* meshRenderers, f64 deltatime,
     UI_Manager* uiManager
 )
@@ -372,7 +372,7 @@ void renderer_destroyDebugMessanger(VkInstance instance, VkDebugUtilsMessengerEX
     }
 }
 
-void recreateSwapChainObject(Renderer *r, u32 width, u32 height, WindowState visibility)
+void recreateSwapChainObject(RenderState *r, u32 width, u32 height, WindowState visibility)
 {
     if (visibility == WINDOW_STATE_MINIMIZED)
     {

@@ -1,10 +1,8 @@
-#include "renderer/details/swapchain.h"
+#include "renderer/backend/vulkan/details/swapchain.h"
 
-#include <stdlib.h>
-#include "renderer/details/queue.h"
-#include "renderer/details/image_view.h"
-#include "renderer/details/framebuffer.h"
 #include "core/debugger.h"
+#include "renderer/backend/vulkan/details/context/queue.h"
+#include <math/mathUtils.h>
 
 void querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface, SwapChainSupportDetails *details)
 {
@@ -71,8 +69,8 @@ VkExtent2D chooseSeapChainExtent(const VkSurfaceCapabilitiesKHR capabilities, u3
     else
     {
         VkExtent2D actualExtent = {
-            .width = clamp(window_w, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
-            .height = clamp(window_h, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)};
+            .width = CLAMP(window_w, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+            .height = CLAMP(window_h, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)};
         return actualExtent;
     }
 }

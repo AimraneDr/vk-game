@@ -45,9 +45,9 @@ void createPipeline(
 
     //VERTEX INPUT
     u32 vertexAttribDescCount = 0;
-    VkVertexInputBindingDescription vertexBindingDesc = getVertexInputBindingDescription();
+    VkVertexInputBindingDescription vertexBindingDesc = getVertex3DInputBindingDescription();
     VkVertexInputAttributeDescription* vertexAttribDescs; 
-    getVertexInputAttributeDescriptions(&vertexAttribDescCount,&vertexAttribDescs);
+    getVertex3DInputAttributeDescriptions(&vertexAttribDescCount,&vertexAttribDescs);
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputInfo.vertexBindingDescriptionCount = 1;
@@ -232,9 +232,9 @@ void UI_createPipeline(
 
     //VERTEX INPUT
     u32 vertexAttribDescCount = 0;
-    VkVertexInputBindingDescription vertexBindingDesc = getUIVertexInputBindingDescription();
+    VkVertexInputBindingDescription vertexBindingDesc = getVertex3DInputBindingDescription();
     VkVertexInputAttributeDescription* vertexAttribDescs; 
-    getUIVertexInputAttributeDescriptions(&vertexAttribDescCount,&vertexAttribDescs);
+    getVertex2DInputAttributeDescriptions(&vertexAttribDescCount,&vertexAttribDescs);
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputInfo.vertexBindingDescriptionCount = 1;

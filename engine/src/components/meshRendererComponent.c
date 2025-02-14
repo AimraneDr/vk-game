@@ -6,7 +6,7 @@
 
 #include <math/mat.h>
 
-void createMeshRenderer(Model* model, Renderer* renderer, MeshRenderer* out){
+void createMeshRenderer(Model* model, RenderState* renderer, MeshRenderer* out){
     // create buffers
     out->indicesCount = model->index_count;
     out->mat4 = MAT4_IDENTITY;
@@ -33,7 +33,7 @@ void createMeshRenderer(Model* model, Renderer* renderer, MeshRenderer* out){
     );
 }
 
-void destroyMeshRenderer(Renderer* renderer, MeshRenderer* meshRenderer){
+void destroyMeshRenderer(RenderState* renderer, MeshRenderer* meshRenderer){
     vkDeviceWaitIdle(renderer->device);
     meshRenderer->indicesCount = 0;
     //destroy buffers
