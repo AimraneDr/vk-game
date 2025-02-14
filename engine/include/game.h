@@ -37,7 +37,7 @@ typedef struct GameState{
     InputManager inputer;
     AssetManager assetManager;
     UI_Manager uiManager;
-    Renderer renderer;
+    RenderState renderer;
 
     Clock clock;
 

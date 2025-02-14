@@ -20,6 +20,6 @@ typedef struct MeshRenderer_Component_t{
     u32 indicesCount;
 }MeshRenderer;
 
-API void createMeshRenderer(Model* model, Renderer* renderer, MeshRenderer* out);
-API void destroyMeshRenderer(Renderer* renderer, MeshRenderer* meshRenderer);
+API void createMeshRenderer(Model* model, RenderState* renderer, MeshRenderer* out);
+API void destroyMeshRenderer(RenderState* renderer, MeshRenderer* meshRenderer);
 #endif //MESH_RENDERER_COMPONENT_H

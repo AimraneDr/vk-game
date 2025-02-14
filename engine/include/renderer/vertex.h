@@ -3,10 +3,10 @@
 
 #include "renderer/render_types.h"
 
-VkVertexInputBindingDescription getVertexInputBindingDescription();
-VkVertexInputBindingDescription getUIVertexInputBindingDescription();
+VkVertexInputBindingDescription getVertex3DInputBindingDescription();
+VkVertexInputBindingDescription getVertex2DInputBindingDescription();
 
-void getVertexInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDescription** outAttribDescs);
-void getUIVertexInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDescription** outAttribDescs);
+void getVertex3DInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDescription** outAttribDescs);
+void getVertex2DInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDescription** outAttribDescs);
 
 #endif //VERTEX_H

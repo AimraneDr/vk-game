@@ -4,12 +4,12 @@
 #include "data_types.h"
 #include <math/mathTypes.h>
 
-typedef struct UI_Vertex {
+typedef struct Vertex2D_t {
     Vec2 pos;
     Vec2 texCoord;
-} UI_Vertex;
+} Vertex2D;
 
-typedef struct Vertex {
+typedef struct Vertex_t {
     Vec3 pos;
     Vec3 norm;
     Vec2 texCoord;

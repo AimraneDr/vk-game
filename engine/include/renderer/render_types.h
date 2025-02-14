@@ -17,119 +17,113 @@
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
+typedef enum RendererBackend_e{
+    RENDERER_BACKEND_VULKAN,
+    RENDERER_BACKEND_OPENGL,
+    RENDERER_BACKEND_DIRECTX,
+    RENDERER_BACKEND_METAL,
+    MAX_RENDERER_BACKENDS
+}RendererBackend;
+
+typedef enum DescriptorType_e{
+    DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+    DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    DESCRIPTOR_TYPE_COMBINED_SAMPLER,
+    DESCRIPTOR_TYPE_SAMPLER,
+    DESCRIPTOR_TYPE_SAMPLED_IMAGE
+} DescriptorType;
+
+typedef enum ShaderStage_e{
+    SHADER_STAGE_VERTEX = 1<<0,
+    SHADER_STAGE_FRAGMENT = 1<<1,
+    SHADER_STAGE_GEOMETRY = 1<<2
+}ShaderStage;
+
+typedef enum PipelineType_e{
+    PIPELINE_TYPE_2D,
+    PIPELINE_TYPE_3D,
+}PipelineType;
+
+typedef enum Topology_t{
+    TOPOLOGY_POINT,
+    TOPOLOGY_LINE,
+    TOPOLOGY_LINE_STRIP,
+    TOPOLOGY_TRIANGLE,
+    TOPOLOGY_TRIANGLE_STRIP,
+}Topology;
+
+typedef struct BindingConfig_t{
+    DescriptorType type;
+    ShaderStage stages;
+}BindingConfig;
+
+typedef struct DescriptorSetConfig_t{
+    BindingConfig* bindings;
+    u8 bindingsCount;
+}DescriptorSetConfig;
+
+typedef struct PushConstantConfig_t{
+    bool enabled;
+    u8 size;
+    ShaderStage stages;
+}PushConstantConfig;
+
+typedef struct PipelineConfig_t{
+    DescriptorSetConfig* sets;
+    u8 setsCount;
+
+    //TODO: change to a file instead of string if it is more convienient
+    String vertexShaderPath;
+    String fragmentShaderPath;
+    String geometryShaderPath;
+
+    PipelineType type;
+    Topology topology;
+
+    PushConstantConfig pushConstant;
+    bool depthTestingEnabled;
+}PipelineConfig;
+
+typedef struct RenderpassInitConfig_t{
+    PipelineConfig* pipelines;
+    u8 pipelinesCount;
+
+    u8 msaaSamples;
+}RenderpassInitConfig;
+
 typedef struct RendererInitConfig_t{
-    VkSampleCountFlagBits msaaSamples;
+    //new
+    RendererBackend backend;
+    RenderpassInitConfig* renderpasses;
+    u8 renderpassesCount;
+
 }RendererInitConfig;
 
-typedef struct Renderer{
-    VkInstance instance;
-    VkDebugUtilsMessengerEXT debugMessanger;
-    VkPhysicalDevice gpu;
-    VkDevice device;
-    VkSurfaceKHR surface;
-    struct{
-        VkQueue graphics;
-        VkQueue present;
-    }queue;
 
-    VkSwapchainKHR swapchain;
-    VkImage* swapchainImages;
-    u32 swapchainImagesCount;
-    VkFormat swapchainImageFormat;
-    VkExtent2D swapchainExtent;
-    VkImageView* swapchainImageViews;
-    VkFramebuffer* swapchainFrameBuffers;
 
-    VkRenderPass renderPass;
-    VkCommandPool commandPool;
-    VkCommandBuffer commandBuffers[MAX_FRAMES_IN_FLIGHT];
-    VkSampleCountFlagBits msaaSamples;
-    u16 mipLevels;
 
-    struct{
-        struct{
-            VkImage image;
-            VkDeviceMemory memory;
-            VkImageView view;
-        }color;
+typedef struct Texture_t{
+    VkImage image;
+    VkDeviceMemory imageMemory;
+    VkImageView imageView;
+    VkSampler sampler;
+    u8 mipLevels;
+}Texture;
 
-        struct{
-            VkImage image;
-            VkDeviceMemory memory;
-            VkImageView view;
-        }depth;
-    }attachments;
+typedef u64* RendererRef;
 
-    struct{
-        VkPipelineLayout pipelineLayout;
-        VkPipeline graphicsPipeline;
+typedef struct RenderState_t{
+    RendererBackend backend;
+    RendererRef ref;
 
-        VkDescriptorSetLayout descriptorSetLayout;
-        VkDescriptorPool descriptorPool;
-        VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
-        struct{
-            VkBuffer buffers[MAX_FRAMES_IN_FLIGHT];
-            VkDeviceMemory buffersMemory[MAX_FRAMES_IN_FLIGHT];
-            void* buffersMapped[MAX_FRAMES_IN_FLIGHT];
-        }uniform;
-    }world;
+    Texture* textures;
+    u32 texturesCount;
+}RenderState;
 
-    
-    //  sync
-    struct{
-        VkSemaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT];
-        VkSemaphore renderFinishedSemaphores[MAX_FRAMES_IN_FLIGHT];
-        VkFence inFlightFences[MAX_FRAMES_IN_FLIGHT];
-    }sync;
-    
-    struct {
-        VkDescriptorPool descriptorPool;
-        VkDescriptorSetLayout descriptorSetLayout;
-        VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
-        
-        VkPipelineLayout pipelineLayout;
-        VkPipeline graphicsPipeline;
-        
-        struct{
-            struct{
-                VkBuffer buffers[MAX_FRAMES_IN_FLIGHT];
-                VkDeviceMemory buffersMemory[MAX_FRAMES_IN_FLIGHT];
-                void* buffersMapped[MAX_FRAMES_IN_FLIGHT];
-            }global;
-            struct{
-                VkBuffer buffers[MAX_FRAMES_IN_FLIGHT];
-                VkDeviceMemory buffersMemory[MAX_FRAMES_IN_FLIGHT];
-                void* buffersMapped[MAX_FRAMES_IN_FLIGHT];
-                VkDeviceSize alignedUboSize;
-            }element;
-        }uniform;
-    }ui;
 
-    // TODO: move to texture asset/component
-    VkImage textureImage;
-    VkDeviceMemory textureImageMemory;
-    VkImageView textureImageView;
-    VkSampler textureSampler;
 
-    u8 currentFrame;
-    bool framebufferResized;
-}Renderer;
 
-typedef struct QueueFamilyIndices{
-    i32 graphicsFamily;
-    i32 computeFamily;
-    i32 presentFamily;
-    u32 familiesCount;
-    i32* uniqueFamilies;
-}QueueFamilyIndices;
-
-typedef struct SwapChainSupportDetails{
-    VkSurfaceCapabilitiesKHR capabilities;
-    u32 formatsCount;
-    VkSurfaceFormatKHR* formats;
-    u32 presentModesCount;
-    VkPresentModeKHR* presentModes;
-}SwapChainSupportDetails;
 
 typedef struct PBR_GLOBAL_UBO_t {
     Mat4 view;
