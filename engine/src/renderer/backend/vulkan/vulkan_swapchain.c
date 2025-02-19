@@ -1,6 +1,7 @@
 #include "renderer/backend/vulkan/vulkan_swapchain.h"
 
 #include "renderer/backend/vulkan/details/swapchain.h"
+#include "renderer/backend/vulkan/details/image_view.h"
 
 void createVulkanSwapchainObj(VulkanContext* context, u32 width, u32 height, SwapchainObj* out){
     
@@ -24,6 +25,8 @@ void createVulkanSwapchainObj(VulkanContext* context, u32 width, u32 height, Swa
         out->imagesCount, 
         out->imageFormat, 
         out->imageViews);
+        
+    out->frameBuffers = 0;
 }
 
 void destroyVulkanSwapchainObj(VulkanContext* context, SwapchainObj* swapchain){

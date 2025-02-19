@@ -71,13 +71,13 @@ void ui_destroyElement(UI_Element* e, RenderState* r){
 
     //destroy this element
     //free mem if allocated
-    if(e->renderer.indicesCount != 0){
-        e->renderer.indicesCount = 0;
-        if(e->renderer.vertexBuffer != 0) vkDestroyBuffer(r->device, e->renderer.vertexBuffer, 0);
-        if(e->renderer.vertexBufferMemory != 0) vkFreeMemory(r->device, e->renderer.vertexBufferMemory, 0);
-        if(e->renderer.indexBuffer != 0) vkDestroyBuffer(r->device, e->renderer.indexBuffer, 0);
-        if(e->renderer.indexBufferMemory != 0) vkFreeMemory(r->device, e->renderer.indexBufferMemory, 0);
-    }
+    // if(e->renderer.indicesCount != 0){
+    //     e->renderer.indicesCount = 0;
+    //     if(e->renderer.vertexBuffer != 0) vkDestroyBuffer(r->device, e->renderer.vertexBuffer, 0);
+    //     if(e->renderer.vertexBufferMemory != 0) vkFreeMemory(r->device, e->renderer.vertexBufferMemory, 0);
+    //     if(e->renderer.indexBuffer != 0) vkDestroyBuffer(r->device, e->renderer.indexBuffer, 0);
+    //     if(e->renderer.indexBufferMemory != 0) vkFreeMemory(r->device, e->renderer.indexBufferMemory, 0);
+    // }
 }
 
 //internal children DynamicArray

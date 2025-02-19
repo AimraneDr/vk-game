@@ -37,8 +37,73 @@ void config(GameConfig* config){
     config->camera.orthographicSize = 3.f;
     config->camera.useOrthographic = true;
 
-    config->renderer.msaaSamples = 4;
-
+    // config->renderer.msaaSamples = 4;
+    config->renderer.backend = RENDERER_BACKEND_VULKAN;
+    
+    config->renderer.renderpassesCount = 1;
+    config->renderer.renderpasses = malloc(sizeof(RenderpassInitConfig));
+    // config->renderer.renderpasses[0] = (RenderpassInitConfig){
+    //     .msaaSamples = 4,
+    //     .pipelinesCount = 1,
+    //     .pipelines = (PipelineConfig[1]){
+    //         {
+    //             .type = PIPELINE_TYPE_3D,
+    //             .topology = TOPOLOGY_TRIANGLE,
+    //             .depthTestingEnabled = true,
+    //             .vertexShaderPath = str_new("shaders/default/vert.spv"),
+    //             .fragmentShaderPath = str_new("shaders/default/frag.spv"),
+    //             .pushConstant = {
+    //                 .enabled = true,
+    //                 .size = sizeof(PBR_PushConstant),
+    //                 .stages = SHADER_STAGE_VERTEX
+    //             },
+    //             .setsCount = 1,
+    //             .sets = (DescriptorSetConfig[1]){
+    //                 {
+    //                     .bindingsCount = 2,
+    //                     .bindings = (BindingConfig[2]){
+    //                         {
+    //                             .type = DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    //                             .stages = SHADER_STAGE_VERTEX,
+    //                             .count = 1,
+    //                             .size = sizeof(PBR_GLOBAL_UBO)
+    //                         },
+    //                         {
+    //                             .type = DESCRIPTOR_TYPE_COMBINED_SAMPLER,
+    //                             .stages = SHADER_STAGE_FRAGMENT,
+    //                             .count = 1,
+    //                             .defaultTexturePath = str_new("./../resources/textures/viking_room.png")
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     },
+    // };
+    config->renderer.renderpasses[0].msaaSamples = 4;
+    config->renderer.renderpasses[0].pipelinesCount = 1;
+    config->renderer.renderpasses[0].pipelines = malloc(sizeof(PipelineConfig));
+    config->renderer.renderpasses[0].pipelines[0].type = PIPELINE_TYPE_3D;
+    config->renderer.renderpasses[0].pipelines[0].topology = TOPOLOGY_TRIANGLE;
+    config->renderer.renderpasses[0].pipelines[0].depthTestingEnabled = true;
+    config->renderer.renderpasses[0].pipelines[0].vertexShaderPath = str_new("shaders/default/vert.spv");
+    config->renderer.renderpasses[0].pipelines[0].fragmentShaderPath = str_new("shaders/default/frag.spv");
+    config->renderer.renderpasses[0].pipelines[0].pushConstant.enabled = true;
+    config->renderer.renderpasses[0].pipelines[0].pushConstant.size = sizeof(PBR_PushConstant);
+    config->renderer.renderpasses[0].pipelines[0].pushConstant.stages = SHADER_STAGE_VERTEX;
+    config->renderer.renderpasses[0].pipelines[0].setsCount = 1;
+    config->renderer.renderpasses[0].pipelines[0].sets = malloc(sizeof(DescriptorSetConfig));
+    config->renderer.renderpasses[0].pipelines[0].sets[0].bindingsCount = 2;
+    config->renderer.renderpasses[0].pipelines[0].sets[0].bindings = malloc(sizeof(BindingConfig) * 2);
+    config->renderer.renderpasses[0].pipelines[0].sets[0].bindings[0].type = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    config->renderer.renderpasses[0].pipelines[0].sets[0].bindings[0].stages = SHADER_STAGE_VERTEX;
+    config->renderer.renderpasses[0].pipelines[0].sets[0].bindings[0].count = 1;
+    config->renderer.renderpasses[0].pipelines[0].sets[0].bindings[0].size = sizeof(PBR_GLOBAL_UBO);
+    config->renderer.renderpasses[0].pipelines[0].sets[0].bindings[1].type = DESCRIPTOR_TYPE_COMBINED_SAMPLER;
+    config->renderer.renderpasses[0].pipelines[0].sets[0].bindings[1].stages = SHADER_STAGE_FRAGMENT;
+    config->renderer.renderpasses[0].pipelines[0].sets[0].bindings[1].count = 1;
+    config->renderer.renderpasses[0].pipelines[0].sets[0].bindings[1].defaultTexturePath = str_new("./../resources/textures/viking_room.png");
+    
     config->suspendOnMinimize = true;
 }
 

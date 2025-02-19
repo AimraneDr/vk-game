@@ -106,7 +106,7 @@ void game_run(GameInterface Interface){
         if(!state.suspended){
             clock_tick(&state.clock);
             
-            renderer_draw(&state.camera, &state.renderer, &state.platform, state.meshRenderers, state.clock.deltaTime, &state.uiManager);
+            // renderer_draw(&state.camera, &state.renderer, &state.platform, state.meshRenderers, state.clock.deltaTime, &state.uiManager);
             
             if(Interface.update) Interface.update(&state);
             if(is_key_down(&state.inputer, KEY_P)){
@@ -128,7 +128,7 @@ void game_shutdown(GameState* state){
     DynamicArray_Destroy(state->meshRenderers);
 
     asset_manager_shutdown(&state->assetManager);
-    renderer_shutdown(&state->renderer);
+    // renderer_shutdown(&state->renderer);
     window_destroy(&state->platform);
 
     shutdown_event_sys();

@@ -11,11 +11,11 @@
 void vulkan_renderer_init(RendererInitConfig config, RenderState* r, PlatformState* p);
 void vulkan_renderer_draw(
     Camera* camera, 
-    RenderState* r, PlatformState* p, 
+    RenderState* rState, PlatformState* pState, 
     MeshRenderer* meshRenderers, f64 deltatime,
     UI_Manager* uiManager
 );
-void vulkan_renderer_shutdown(RenderState* r);
+void vulkan_renderer_shutdown(RenderState* rState);
 
 
 #endif //RENDERER_VULKAN_BACKEND_H

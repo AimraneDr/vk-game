@@ -12,6 +12,7 @@
 
 #include <vulkan/vulkan.h>
 #include <math/mathTypes.h>
+#include <string/str_types.h>
 #include "data_types.h"
 
 
@@ -29,6 +30,7 @@ typedef enum DescriptorType_e{
     DESCRIPTOR_TYPE_UNIFORM_BUFFER,
     DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
     DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
     DESCRIPTOR_TYPE_COMBINED_SAMPLER,
     DESCRIPTOR_TYPE_SAMPLER,
     DESCRIPTOR_TYPE_SAMPLED_IMAGE
@@ -53,9 +55,17 @@ typedef enum Topology_t{
     TOPOLOGY_TRIANGLE_STRIP,
 }Topology;
 
+
 typedef struct BindingConfig_t{
     DescriptorType type;
     ShaderStage stages;
+    u8 count;
+    u32 size;
+    u32 dynamicCount;  // Number of dynamic elements for dynamic buffers
+    String defaultTexturePath; //if the binding a texture
+
+    //
+    
 }BindingConfig;
 
 typedef struct DescriptorSetConfig_t{
@@ -101,24 +111,11 @@ typedef struct RendererInitConfig_t{
 }RendererInitConfig;
 
 
-
-
-typedef struct Texture_t{
-    VkImage image;
-    VkDeviceMemory imageMemory;
-    VkImageView imageView;
-    VkSampler sampler;
-    u8 mipLevels;
-}Texture;
-
 typedef u64* RendererRef;
 
 typedef struct RenderState_t{
     RendererBackend backend;
     RendererRef ref;
-
-    Texture* textures;
-    u32 texturesCount;
 }RenderState;
 
 

@@ -25,23 +25,23 @@ UI_Element* ui_create_container(UI_Element* parent, Transform2D transform, UI_St
 
     new->renderer.indicesCount = indicesCount;
 
-    createVertexBuffer(
-        r->gpu,
-        r->device,
-        r->queue.graphics,
-        r->commandPool,
-        verticesCount, ui_vertices, sizeof(Vertex2D),
-        &new->renderer.vertexBuffer,
-        &new->renderer.vertexBufferMemory
-    );
-    createIndexBuffer(
-        r->gpu,
-        r->device,
-        r->queue.graphics,
-        r->commandPool,
-        indicesCount, ui_indices,
-        &new->renderer.indexBuffer,
-        &new->renderer.indexBufferMemory
-    );
+    // createVertexBuffer(
+    //     r->gpu,
+    //     r->device,
+    //     r->queue.graphics,
+    //     r->commandPool,
+    //     verticesCount, ui_vertices, sizeof(Vertex2D),
+    //     &new->renderer.vertexBuffer,
+    //     &new->renderer.vertexBufferMemory
+    // );
+    // createIndexBuffer(
+    //     r->gpu,
+    //     r->device,
+    //     r->queue.graphics,
+    //     r->commandPool,
+    //     indicesCount, ui_indices,
+    //     &new->renderer.indexBuffer,
+    //     &new->renderer.indexBufferMemory
+    // );
     return new;
 }

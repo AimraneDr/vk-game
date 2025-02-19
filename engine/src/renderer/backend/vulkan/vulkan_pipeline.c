@@ -4,6 +4,7 @@
 #include "core/debugger.h"
 #include "renderer/vertex.h"
 #include "renderer/backend/vulkan/details/utils.h"
+#include "renderer/backend/vulkan/details/shader.h"
 
 VkPrimitiveTopology getVulkanTopology(Topology t){
     switch (t)

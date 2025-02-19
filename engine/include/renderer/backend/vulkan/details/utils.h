@@ -10,6 +10,6 @@ const u32 validationLayersCount();
 
 char* const* deviceExtensionsNames();
 const u32 deviceExtensionsCount();
-VkShaderStageFlags  get_vulkan_shader_stage_flags(ShaderStage bits)
+VkShaderStageFlags  get_vulkan_shader_stage_flags(ShaderStage bits);
 
 #endif //RENDERER_BACKEND_VULKAN_UTILS_H
