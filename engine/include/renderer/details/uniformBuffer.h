@@ -7,6 +7,9 @@
 
 #include <math/mathTypes.h>
 
+void createUniformBuffers(VkPhysicalDevice gpu, VkDevice device, VkDeviceSize bufferSize, VkBuffer* uniformBuffers, VkDeviceMemory* buffersMems, void** mappedBuffs);
+void createDynamicOffsetUniformBuffers(VkPhysicalDevice gpu, VkDevice device, u32 uboSize, VkBuffer* uniformBuffers, VkDeviceMemory* buffersMems, void** mappedBuffs, VkDeviceSize* outAlignedUboSize);
+
 void PBR_createUniformBuffers(VkPhysicalDevice gpu, VkDevice device, VkBuffer* uniformBuffers, VkDeviceMemory* buffersMems, void** mappedBuffs);
 
 void UI_createUniformBuffers(VkPhysicalDevice gpu, VkDevice device, u32 uboSize, VkBuffer* uniformBuffers, VkDeviceMemory* buffersMems, void** mappedBuffs);

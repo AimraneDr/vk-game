@@ -3,6 +3,7 @@
 
 #include "data_types.h"
 #include <math/mathTypes.h>
+#include "ecs/ecs_types.h"
 
 typedef struct Transform_Component_t{
     Vec3 position;

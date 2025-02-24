@@ -13,18 +13,10 @@ void endSingleTimeCommands(VkDevice device, VkCommandPool cmdPool, VkQueue queue
 
 void recordCommandBuffer(
     VkCommandBuffer commandBuffer, 
-    VkPipeline worldPipeline, 
-    VkPipelineLayout worldPipelineLayout, 
-    VkPipeline uiPipeline, 
-    VkPipelineLayout uiPipelineLayout, 
     VkRenderPass renderpass, 
     VkFramebuffer* swapChainFramebuffers,
     VkExtent2D extent, uint32_t imageIndex, 
-    VkDescriptorSet* worldDescriptorSet, 
-    VkDescriptorSet* uiDescriptorSet,
-    void* uiElementUniformBufferMapped,
-    VkDeviceSize alignedUboSize,
-    MeshRenderer* meshRenderers,
+    Scene* scene,
     UI_Manager* uiManager,
     f64 deltatime
 );

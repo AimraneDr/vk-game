@@ -50,6 +50,7 @@ typedef struct UI_Element_t{
 
     
 
+    //TODO: rename to render context
     struct{
         VkBuffer vertexBuffer;
         VkDeviceMemory vertexBufferMemory;

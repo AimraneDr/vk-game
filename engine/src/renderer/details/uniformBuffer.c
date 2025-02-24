@@ -11,10 +11,7 @@
 
 
 
-
-void PBR_createUniformBuffers(VkPhysicalDevice gpu, VkDevice device, VkBuffer* uniformBuffers, VkDeviceMemory* buffersMems, void** mappedBuffs){
-    VkDeviceSize bufferSize = sizeof(PBR_GLOBAL_UBO);
-
+void createUniformBuffers(VkPhysicalDevice gpu, VkDevice device, VkDeviceSize bufferSize, VkBuffer* uniformBuffers, VkDeviceMemory* buffersMems, void** mappedBuffs){
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         createBuffer(
             gpu,
@@ -30,22 +27,7 @@ void PBR_createUniformBuffers(VkPhysicalDevice gpu, VkDevice device, VkBuffer* u
     }
 }
 
-void UI_createUniformBuffers(VkPhysicalDevice gpu, VkDevice device, u32 uboSize, VkBuffer* uniformBuffers, VkDeviceMemory* buffersMems, void** mappedBuffs){
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        createBuffer(
-            gpu,
-            device,
-            uboSize, 
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-            &(uniformBuffers[i]), 
-            &(buffersMems[i])
-        );
-
-        vkMapMemory(device, buffersMems[i], 0, uboSize, 0, &(mappedBuffs[i]));
-    }
-}
-void UI_createDynamicOffsetUniformBuffers(VkPhysicalDevice gpu, VkDevice device, u32 uboSize, VkBuffer* uniformBuffers, VkDeviceMemory* buffersMems, void** mappedBuffs, VkDeviceSize* outAlignedUboSize){
+void createDynamicOffsetUniformBuffers(VkPhysicalDevice gpu, VkDevice device, u32 uboSize, VkBuffer* uniformBuffers, VkDeviceMemory* buffersMems, void** mappedBuffs, VkDeviceSize* outAlignedUboSize){
     VkPhysicalDeviceProperties deviceProperties;
     vkGetPhysicalDeviceProperties(gpu, &deviceProperties);
     VkDeviceSize minUboAlignment = deviceProperties.limits.minUniformBufferOffsetAlignment;

@@ -8,14 +8,15 @@
 #include "components/UI/ui_types.h"
 #include "assets/asset_types.h"
 
-void renderer_init(RendererInitConfig config, Renderer* r, PlatformState* p);
+void renderer_init(RendererInitConfig config, Renderer* r, PlatformState* p, Scene* s);
 void renderer_draw(
     Camera* camera, 
     Renderer* r, PlatformState* p, 
-    MeshRenderer* meshRenderers, f64 deltatime,
+    Scene* scene,
+    f64 deltatime,
     UI_Manager* uiManager
 );
-void renderer_shutdown(Renderer* r);
+void renderer_shutdown(Renderer* r, Scene* s);
 
 
 #endif //RENDERER_H

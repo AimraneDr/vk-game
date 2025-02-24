@@ -3,6 +3,19 @@
 
 #include "renderer/render_types.h"
 
+void create_graphics_pipeline(
+    VkDevice device,
+    const char* vert_shader,
+    const char* frag_shader,
+    VkExtent2D extent,
+    VkSampleCountFlagBits msaa_samples,
+    VkRenderPass render_pass,
+    VkDescriptorSetLayout descriptor_set_layout,
+    const PipelineConfig* config,
+    VkPipelineLayout* out_layout,
+    VkPipeline* out_pipeline);
+
+
 void createPipeline(
     VkDevice device, 
     const char* vertshadername, const char* fragshadername,

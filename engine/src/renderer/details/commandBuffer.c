@@ -6,6 +6,8 @@
 #include <collections/DynamicArray.h>
 #include <math/mat.h>
 
+#include "ecs/ecs.h"
+
 void createCommandBuffer(VkDevice device, VkCommandPool pool, VkCommandBuffer* out){
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -82,18 +84,10 @@ void recursiveUIElementsDraw(VkCommandBuffer commandBuffer, void* uniformBufferM
 
 void recordCommandBuffer(
     VkCommandBuffer commandBuffer, 
-    VkPipeline worldPipeline, 
-    VkPipelineLayout worldPipelineLayout, 
-    VkPipeline uiPipeline, 
-    VkPipelineLayout uiPipelineLayout, 
     VkRenderPass renderpass, 
     VkFramebuffer* swapChainFramebuffers,
     VkExtent2D extent, uint32_t imageIndex, 
-    VkDescriptorSet* worldDescriptorSet, 
-    VkDescriptorSet* uiDescriptorSet,
-    void* uiElementUniformBufferMapped,
-    VkDeviceSize alignedUboSize,
-    MeshRenderer* meshRenderers,
+    Scene* scene,
     UI_Manager* uiManager,
     f64 deltatime
 ) 
@@ -152,37 +146,37 @@ void recordCommandBuffer(
     };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
     
-    
+    ecs_systems_update_group(scene, deltatime, SYSTEM_GROUP_RENDERING);
     //World pipeline
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, worldPipeline);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, worldPipelineLayout, 0, 1, worldDescriptorSet, 0, 0);
+    // vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, worldPipeline);
+    // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, worldPipelineLayout, 0, 1, worldDescriptorSet, 0, 0);
     
-    for(u16 i=0; i< DynamicArray_Length(meshRenderers); i++){
-        MeshRenderer* m = &meshRenderers[i];
-        PBR_PushConstant pc = {
-            .model = m->mat4
-        };
-        VkBuffer vertexBuffers[] = { m->renderContext.vertexBuffer};
-        VkDeviceSize offsets[] = {0};
-        vkCmdPushConstants(
-            commandBuffer,
-            worldPipelineLayout,
-            VK_SHADER_STAGE_VERTEX_BIT,
-            0,
-            sizeof(PBR_PushConstant),
-            &pc
-        );
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-        vkCmdBindIndexBuffer(commandBuffer, m->renderContext.indexBuffer,0, VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(commandBuffer, m->indicesCount, 1, 0, 0, 0);
-    }
+    // for(u16 i=0; i< DynamicArray_Length(meshRenderers); i++){
+    //     MeshRenderer* m = &meshRenderers[i];
+    //     PBR_PushConstant pc = {
+    //         .model = m->mat4
+    //     };
+    //     VkBuffer vertexBuffers[] = { m->renderContext.vertexBuffer};
+    //     VkDeviceSize offsets[] = {0};
+    //     vkCmdPushConstants(
+    //         commandBuffer,
+    //         worldPipelineLayout,
+    //         VK_SHADER_STAGE_VERTEX_BIT,
+    //         0,
+    //         sizeof(PBR_PushConstant),
+    //         &pc
+    //     );
+    //     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+    //     vkCmdBindIndexBuffer(commandBuffer, m->renderContext.indexBuffer,0, VK_INDEX_TYPE_UINT32);
+    //     vkCmdDrawIndexed(commandBuffer, m->indicesCount, 1, 0, 0, 0);
+    // }
 
-    vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, uiPipeline);
+    // vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+    // vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, uiPipeline);
     
     //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, uiPipelineLayout, 0, 1, uiDescriptorSet, 0, 0);
 
-    recursiveUIElementsDraw(commandBuffer, uiElementUniformBufferMapped, alignedUboSize, deltatime, uiPipelineLayout, uiDescriptorSet, &uiManager->root, 0);
+    // recursiveUIElementsDraw(commandBuffer, uiElementUniformBufferMapped, alignedUboSize, deltatime, uiPipelineLayout, uiDescriptorSet, &uiManager->root, 0);
 
     vkCmdEndRenderPass(commandBuffer);
 

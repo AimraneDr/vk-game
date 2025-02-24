@@ -9,8 +9,15 @@
 #include "assets/asset_manager.h"
 #include <math/mathTypes.h>
 #include <collections/DynamicArray.h>
-
 #include <math/vec3.h>
+
+#include "components/transform.h"
+#include "components/meshRenderer.h"
+
+#include "systems/PBR_renderer.h"
+#include "systems/UI_renderer.h"
+
+#include "ecs/ecs.h"
 
 EVENT_CALLBACK(onMinimize){
     GameState* state = (GameState*)listener;
@@ -22,10 +29,17 @@ EVENT_CALLBACK(onActivated){
     state->suspended = false;
 }
 
+EVENT_CALLBACK(onWiinResize){
+    Camera* camera = (Camera*)listener;
+    camera->viewRect.x = eContext.u32[0];
+    camera->viewRect.y = eContext.u32[1];
+    LOG_INFO("Camera View Rect Resized");
+}
+
 void game_shutdown(GameState* state);
 void GameInitConfigSetDefaults(GameConfig* config);
-
-
+void RegisterDefaultComponents(Scene* scene);
+void RegisterDefaultSystems(Scene* scene, Renderer* r, Camera* camera);
 
 void game_init(GameConfig config, GameState* out){
     // init platform
@@ -62,14 +76,20 @@ void game_init(GameConfig config, GameState* out){
     out->camera.fieldOfView = config.camera.fieldOfView;
     out->camera.orthographicSize = config.camera.orthographicSize;
     out->camera.useOrthographic = config.camera.useOrthographic;
+    out->camera.viewRect = (Vec2i){info.display.w,info.display.h};
 
     init_event_sys();
 
     window_init(info, &out->platform);
     input_system_init(&out->inputer);
     asset_manager_init(&out->assetManager);
+    
+    //ecs
+    ecs_init(&out->scene);
+    RegisterDefaultComponents(&out->scene);
+    RegisterDefaultSystems(&out->scene, &out->renderer, &out->camera);
 
-    renderer_init(config.renderer, &out->renderer, &out->platform);
+    renderer_init(config.renderer, &out->renderer, &out->platform, &out->scene);
 
     out->meshRenderers = DynamicArray_Create(MeshRenderer);
 
@@ -96,27 +116,36 @@ void game_run(GameInterface Interface){
         listner.callback = onActivated;
         subscribe_to_event(EVENT_TYPE_WINDOW_ACTIVATED, &listner);
     } 
-
+    subscribe_to_event(
+        EVENT_TYPE_WINDOW_RESIZED,
+        &(EventListener){
+            .callback = onWiinResize,
+            .listener = &state.camera
+        }
+    );
     //user specific startup
     if(Interface.start) Interface.start(&state);
 
+    ecs_systems_initialize(&state.scene);
     clock_start(&state.clock);
     while (!state.platform.display.shouldClose)
     {
         if(!state.suspended){
             clock_tick(&state.clock);
             
-            renderer_draw(&state.camera, &state.renderer, &state.platform, state.meshRenderers, state.clock.deltaTime, &state.uiManager);
+            renderer_draw(&state.camera, &state.renderer, &state.platform, &state.scene, state.clock.deltaTime, &state.uiManager);
             
             if(Interface.update) Interface.update(&state);
             if(is_key_down(&state.inputer, KEY_P)){
                 LOG_DEBUG("%.2f FPS", 1 /state.clock.deltaTime);
             }
+            ecs_systems_update(&state.scene, state.clock.deltaTime);
         }
         input_system_update(&state.inputer, state.clock.deltaTime);
         window_PullEvents(&state.platform);
     }
 
+    ecs_systems_shutdown(&state.scene);
     if(Interface.cleanup) Interface.cleanup(&state);
     
     game_shutdown(&state);
@@ -126,9 +155,9 @@ void game_run(GameInterface Interface){
 void game_shutdown(GameState* state){
 
     DynamicArray_Destroy(state->meshRenderers);
-
     asset_manager_shutdown(&state->assetManager);
-    renderer_shutdown(&state->renderer);
+    renderer_shutdown(&state->renderer, &state->scene);
+    ecs_shutdown(&state->scene);
     window_destroy(&state->platform);
 
     shutdown_event_sys();
@@ -188,4 +217,18 @@ void GameInitConfigSetDefaults(GameConfig* config) {
     if (config->camera.nearPlane == 0.0f) {
         config->camera.nearPlane = base.camera.nearPlane;
     }
+}
+
+void RegisterDefaultComponents(Scene* scene){
+    REGIATER_COMPONENT(scene, Transform);
+    REGIATER_COMPONENT(scene, Transform2D);
+    REGIATER_COMPONENT(scene, MeshRenderer);
+    REGIATER_COMPONENT(scene, UI_Element);
+}
+
+void RegisterDefaultSystems(Scene* scene, Renderer* r, Camera* camera){
+    System pbr_renderer = PBR_renderer_get_system_ref(scene,r, camera);
+    System ui_renderer = UI_renderer_get_system_ref(scene,r, camera);
+    ecs_register_system_to_group(scene, &pbr_renderer, SYSTEM_GROUP_RENDERING);
+    ecs_register_system_to_group(scene, &ui_renderer, SYSTEM_GROUP_RENDERING);
 }

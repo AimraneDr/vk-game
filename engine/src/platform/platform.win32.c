@@ -33,6 +33,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 state->display.width = LOWORD(lParam);
                 state->display.height = HIWORD(lParam);
                 state->display.visibility = WINDOW_STATE_MAXIMIZED;
+                EventContext context = {
+                    .u32[0] = state->display.width,
+                    .u32[1] = state->display.height
+                };
                 emit_event(EVENT_TYPE_WINDOW_MAXIMIZED, (EventContext){0}, state);
             } else {
                 state->display.width = LOWORD(lParam);

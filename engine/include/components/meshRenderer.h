@@ -5,6 +5,7 @@
 #include "meshTypes.h"
 #include "renderer/render_types.h"
 #include "assets/asset_types.h"
+#include "ecs/ecs_types.h"
 
 typedef struct MeshRenderer_Component_t{
     struct {
@@ -19,6 +20,7 @@ typedef struct MeshRenderer_Component_t{
     Mat4 mat4;
     u32 indicesCount;
 }MeshRenderer;
+
 
 API void createMeshRenderer(Model* model, Renderer* renderer, MeshRenderer* out);
 API void destroyMeshRenderer(Renderer* renderer, MeshRenderer* meshRenderer);

@@ -32,6 +32,7 @@
 
 #include <collections/DynamicArray.h>
 
+#include "ecs/ecs.h"
 
 void renderer_createVulkanInstance(VkInstance *instance);
 void renderer_initDebugMessanger(VkInstance *instance, VkDebugUtilsMessengerEXT *out);
@@ -41,12 +42,13 @@ void renderer_destroyDebugMessanger(VkInstance instance, VkDebugUtilsMessengerEX
 
 void recreateSwapChainObject(Renderer *r, u32 width, u32 height, WindowState visibility);
 
-void onWindowResize(EventType eType, void *sender, void *listener, EventContext context)
+static void onWindowResize(EventType eType, void *sender, void *listener, EventContext context)
 {
     ((Renderer *)listener)->framebufferResized = true;
+    LOG_INFO("frame buffer resized");
 }
 
-void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p)
+void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p, Scene* s)
 {
     r->gpu = VK_NULL_HANDLE;
     r->currentFrame = 0;
@@ -71,14 +73,6 @@ void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p)
     createSwapChainImageViews(r->device, r->swapchainImages, r->swapchainImagesCount, r->swapchainImageFormat, r->swapchainImageViews);
 
     createRenderPass(r->gpu, r->device, r->swapchainImageFormat, r->msaaSamples, &r->renderPass);
-
-    //3d world pipeline
-    PBR_createDescriptorSetLayout(r->device, &r->world.descriptorSetLayout);
-    createPipeline(r->device, "shaders/default/vert.spv", "shaders/default/frag.spv", r->swapchainExtent, r->msaaSamples, r->renderPass, r->world.descriptorSetLayout, &r->world.pipelineLayout, &r->world.graphicsPipeline);
-    
-    //UI pipeline
-    UI_createDescriptorSetLayout(r->device, &r->ui.descriptorSetLayout);
-    UI_createPipeline(r->device, "shaders/default/ui.vert.spv", "shaders/default/ui.frag.spv", r->swapchainExtent, r->msaaSamples, r->renderPass, r->ui.descriptorSetLayout, &r->ui.pipelineLayout, &r->ui.graphicsPipeline);
     
     createCommandPool(r->gpu, r->device, r->surface, &r->commandPool);
 
@@ -86,34 +80,10 @@ void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p)
     createDepthResources(r->gpu, r->device, r->commandPool, r->queue.graphics, r->swapchainExtent, r->msaaSamples, &r->attachments.depth.image, &r->attachments.depth.memory, &r->attachments.depth.view);
     createFramebuffers(r->device, r->renderPass, r->swapchainImageViews, r->attachments.color.view, r->attachments.depth.view, r->swapchainImagesCount, r->swapchainExtent, &r->swapchainFrameBuffers);
 
-    createTextureImage(r->gpu, r->device, r->commandPool, r->queue.graphics, &r->mipLevels, &r->textureImage, &r->textureImageMemory);
-    createTextureImageView(r->device, r->textureImage, r->mipLevels, &r->textureImageView);
-    createTextureImageSampler(r->gpu, r->device, r->mipLevels, &r->textureSampler);
-
-    PBR_createUniformBuffers(r->gpu, r->device, r->world.uniform.buffers, r->world.uniform.buffersMemory, r->world.uniform.buffersMapped);
-
-    UI_createUniformBuffers(r->gpu, r->device, sizeof(UI_Global_UBO), r->ui.uniform.global.buffers, r->ui.uniform.global.buffersMemory, r->ui.uniform.global.buffersMapped);
-    UI_createDynamicOffsetUniformBuffers(r->gpu, r->device, sizeof(UI_Element_UBO), r->ui.uniform.element.buffers, r->ui.uniform.element.buffersMemory, r->ui.uniform.element.buffersMapped, &r->ui.uniform.element.alignedUboSize);
-
-    PBR_createDescriptorPool(r->device, &r->world.descriptorPool);
-    PBR_createDescriptorSets(r->device, r->world.descriptorSetLayout, r->world.descriptorPool, r->world.uniform.buffers, r->textureImageView, r->textureSampler, r->world.descriptorSets);
-
-    //UI
-    UI_createDescriptorPool(r->device, &r->ui.descriptorPool);
-    UI_createDescriptorSets(
-        r->device, 
-        r->ui.descriptorSetLayout, 
-        r->ui.descriptorPool, 
-        r->ui.uniform.global.buffers, 
-        r->ui.uniform.element.buffers,
-        r->ui.uniform.element.alignedUboSize, 
-        r->textureImageView, 
-        r->textureSampler, 
-        r->ui.descriptorSets
-    );
-
     createCommandBuffer(r->device, r->commandPool, r->commandBuffers);
     createSyncObjects(r->device, r->sync.imageAvailableSemaphores, r->sync.renderFinishedSemaphores, r->sync.inFlightFences);
+
+    ecs_systems_start_group(s, SYSTEM_GROUP_RENDERING);
 
     // Subscribe to Events
     EventListener onResizeListener = {
@@ -124,32 +94,19 @@ void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p)
     return;
 };
 
-void renderer_shutdown(Renderer *r)
+void renderer_shutdown(Renderer *r, Scene* s)
 {    
     vkDeviceWaitIdle(r->device);
 
     destroySyncObjects(r->device, r->sync.imageAvailableSemaphores, r->sync.renderFinishedSemaphores, r->sync.inFlightFences);
 
-    destroyUniformBuffers(r->device, r->ui.uniform.global.buffers, r->ui.uniform.global.buffersMemory);
-    destroyUniformBuffers(r->device, r->ui.uniform.element.buffers, r->ui.uniform.element.buffersMemory);
-    destroyUniformBuffers(r->device, r->world.uniform.buffers, r->world.uniform.buffersMemory);
-    
-    destroyTextureSampler(r->device, r->textureSampler);
-    destroyTextureImageView(r->device, r->textureImageView);
-    destroyTextureImage(r->device, r->textureImage, r->textureImageMemory);
+    ecs_systems_destroy_group(s, SYSTEM_GROUP_RENDERING);
     
     destroyCommandBuffer(r->device, r->commandPool, r->commandBuffers);
     destroyCommandPool(r->device, r->commandPool);
     destroyFramebuffers(r->device, r->swapchainFrameBuffers, r->swapchainImagesCount);
     destroyDepthResources(r->device, r->attachments.depth.image, r->attachments.depth.memory, r->attachments.depth.view);
     destroyColorResources(r->device, r->attachments.color.image, r->attachments.color.memory, r->attachments.color.view);
-    destroyPipeline(r->device, &r->world.graphicsPipeline, r->world.pipelineLayout);
-    destroyPipeline(r->device, &r->ui.graphicsPipeline, r->ui.pipelineLayout);
-
-    destroyDescriptorPool(r->device, r->world.descriptorPool);
-    destroyDescriptorPool(r->device, r->ui.descriptorPool);
-    destroyDescriptorSetLayout(r->device, r->world.descriptorSetLayout);
-    destroyDescriptorSetLayout(r->device, r->ui.descriptorSetLayout);
 
     destroyRenderPass(r->device, r->renderPass);
     destroySwapChainImageViews(r->device, r->swapchainImageViews, r->swapchainImagesCount);
@@ -164,7 +121,8 @@ void renderer_shutdown(Renderer *r)
 void renderer_draw(
     Camera *camera, 
     Renderer *r, PlatformState *p, 
-    MeshRenderer* meshRenderers, f64 deltatime,
+    Scene* scene,
+    f64 deltatime,
     UI_Manager* uiManager
 )
 {
@@ -185,25 +143,13 @@ void renderer_draw(
     vkResetFences(r->device, 1, &r->sync.inFlightFences[r->currentFrame]);
     vkResetCommandBuffer(r->commandBuffers[r->currentFrame], 0);
 
-    //TODO: conditionally update when needed
-    PBR_updateGlobalUniformBuffer(r->currentFrame, (Vec2){p->display.width, p->display.height}, r->world.uniform.buffersMapped, deltatime, camera);
-    UI_updateGlobalUniformBuffer(r->currentFrame, (Vec2){p->display.width, p->display.height}, r->ui.uniform.global.buffersMapped, deltatime, uiManager);
-    
     recordCommandBuffer(
         r->commandBuffers[r->currentFrame], 
-        r->world.graphicsPipeline, 
-        r->world.pipelineLayout, 
-        r->ui.graphicsPipeline, 
-        r->ui.pipelineLayout, 
         r->renderPass, 
         r->swapchainFrameBuffers, 
         r->swapchainExtent, 
-        imageIndex, 
-        &r->world.descriptorSets[r->currentFrame],
-        &r->ui.descriptorSets[r->currentFrame],
-        r->ui.uniform.element.buffersMapped[r->currentFrame],
-        r->ui.uniform.element.alignedUboSize,
-        meshRenderers,
+        imageIndex,
+        scene,
         uiManager,
         deltatime
     );

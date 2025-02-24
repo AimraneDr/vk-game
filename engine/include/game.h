@@ -12,7 +12,7 @@
 #include "components/camera.h"
 #include "assets/asset_types.h"
 #include <string/str_types.h>
-
+#include "ecs/ecs_types.h"
 
 typedef struct GameConfig{
     PlatformInitConfig platform;
@@ -46,6 +46,7 @@ typedef struct GameState{
 
     MeshRenderer* meshRenderers;
 
+    Scene scene;
     bool suspended;
 }GameState;
 

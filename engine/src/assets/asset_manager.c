@@ -32,7 +32,7 @@ Asset load_asset(AssetManager* manager, const char* name){
         if(new.type == ASSET_TYPE_MODEL){
             if(manager->assets[ASSET_TYPE_MODEL] == 0)
                 manager->assets[ASSET_TYPE_MODEL] = createAssetTypeArray();
-            DynamicArray_Push(manager->assets[ASSET_TYPE_MODEL], new);
+            DynamicArray_Push(manager->assets[ASSET_TYPE_MODEL], new)
         }
     }
     u32 length = DynamicArray_Length(manager->assets[ASSET_TYPE_MODEL]);

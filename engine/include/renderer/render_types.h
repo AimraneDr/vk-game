@@ -21,6 +21,53 @@ typedef struct RendererInitConfig_t{
     VkSampleCountFlagBits msaaSamples;
 }RendererInitConfig;
 
+typedef struct PipelineConfig {
+    // Vertex input
+    VkVertexInputBindingDescription (*get_vertex_binding_desc)(void);
+    void (*get_vertex_attr_descs)(u32* count, VkVertexInputAttributeDescription** descs);
+    
+    // Depth/stencil
+    VkBool32 depth_test_enable;
+    VkBool32 depth_write_enable;
+    VkCompareOp depth_compare_op;
+    
+    // Pipeline stages
+    u32 subpass_index;
+    size_t push_constant_size;
+    VkShaderStageFlags push_constant_stage;
+    
+    // Blend factors
+    VkBlendFactor src_color_blend_factor;
+    VkBlendFactor dst_color_blend_factor;
+} PipelineConfig;
+
+typedef struct Pipeline_t{
+    VkPipelineLayout pipelineLayout;
+    VkPipeline ref;
+
+    VkDescriptorSetLayout descriptorSetLayout;
+    VkDescriptorPool descriptorPool;
+    VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
+    struct{
+        struct{
+            VkBuffer buffers[MAX_FRAMES_IN_FLIGHT];
+            VkDeviceMemory buffersMemory[MAX_FRAMES_IN_FLIGHT];
+            void* buffersMapped[MAX_FRAMES_IN_FLIGHT];
+        }global;
+        struct{
+            VkBuffer buffers[MAX_FRAMES_IN_FLIGHT];
+            VkDeviceMemory buffersMemory[MAX_FRAMES_IN_FLIGHT];
+            void* buffersMapped[MAX_FRAMES_IN_FLIGHT];
+            VkDeviceSize alignedUboSize;
+        }element;
+    }uniform;
+
+    VkImage textureImage;
+    VkDeviceMemory textureImageMemory;
+    VkImageView textureImageView;
+    VkSampler textureSampler;
+}Pipeline;
+
 typedef struct Renderer{
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugMessanger;
@@ -59,21 +106,6 @@ typedef struct Renderer{
             VkImageView view;
         }depth;
     }attachments;
-
-    struct{
-        VkPipelineLayout pipelineLayout;
-        VkPipeline graphicsPipeline;
-
-        VkDescriptorSetLayout descriptorSetLayout;
-        VkDescriptorPool descriptorPool;
-        VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
-        struct{
-            VkBuffer buffers[MAX_FRAMES_IN_FLIGHT];
-            VkDeviceMemory buffersMemory[MAX_FRAMES_IN_FLIGHT];
-            void* buffersMapped[MAX_FRAMES_IN_FLIGHT];
-        }uniform;
-    }world;
-
     
     //  sync
     struct{
@@ -81,35 +113,6 @@ typedef struct Renderer{
         VkSemaphore renderFinishedSemaphores[MAX_FRAMES_IN_FLIGHT];
         VkFence inFlightFences[MAX_FRAMES_IN_FLIGHT];
     }sync;
-    
-    struct {
-        VkDescriptorPool descriptorPool;
-        VkDescriptorSetLayout descriptorSetLayout;
-        VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
-        
-        VkPipelineLayout pipelineLayout;
-        VkPipeline graphicsPipeline;
-        
-        struct{
-            struct{
-                VkBuffer buffers[MAX_FRAMES_IN_FLIGHT];
-                VkDeviceMemory buffersMemory[MAX_FRAMES_IN_FLIGHT];
-                void* buffersMapped[MAX_FRAMES_IN_FLIGHT];
-            }global;
-            struct{
-                VkBuffer buffers[MAX_FRAMES_IN_FLIGHT];
-                VkDeviceMemory buffersMemory[MAX_FRAMES_IN_FLIGHT];
-                void* buffersMapped[MAX_FRAMES_IN_FLIGHT];
-                VkDeviceSize alignedUboSize;
-            }element;
-        }uniform;
-    }ui;
-
-    // TODO: move to texture asset/component
-    VkImage textureImage;
-    VkDeviceMemory textureImageMemory;
-    VkImageView textureImageView;
-    VkSampler textureSampler;
 
     u8 currentFrame;
     bool framebufferResized;

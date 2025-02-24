@@ -7,6 +7,7 @@
 #include <assets/asset_manager.h>
 #include <core/files.h>
 #include <core/events.h>
+#include <ecs/ecs.h>
 #include <components/meshRenderer.h>
 #include <components/UI/uiComponents.h>
 #include <collections/DynamicArray.h>
@@ -18,6 +19,9 @@
 
 #include <math/vec3.h>
 
+EVENT_CALLBACK(resizingCallBack){
+    LOG_INFO("Triggered...!!!");
+}
 
 void config(GameConfig* config){
     
@@ -43,7 +47,7 @@ void config(GameConfig* config){
 }
 
 void start(GameState* state){
-    state->uiManager.pixelsPerPoint = 50.f;
+    state->camera.pixelsPerPoint = 50.f;
 
     Asset a = load_asset(&state->assetManager, "./../resources/models/viking_room.obj");
     Asset a1 = load_asset(&state->assetManager, "./../resources/models/cube.obj");
@@ -55,17 +59,30 @@ void start(GameState* state){
     release_asset(&state->assetManager, &a);
     release_asset(&state->assetManager, &a1);
 
+    //test ecs entity
+    EntityID vikingRoom0 = newEntity(&state->scene);
+    Transform initT = {
+        .position = {1,0,1},
+        .rotation = {45,0,0},
+        .scale = {1,1,1}
+    };
+    ADD_COMPONENT(&state->scene, vikingRoom0, Transform, &initT);
+    ADD_COMPONENT(&state->scene, vikingRoom0, MeshRenderer, &mesh0);
+
     Transform2D containerTransform = {
-        .position = {5.f, 3.f},
-        .scale = {1.f, 1.5f},
+        .position = {0.f, 0.f},
+        .scale = {1.f, 1.f},
         .rotation = 90.f,
-        .pivot = {.5f ,.5f}
+        .pivot = {0.f ,0.f}
     };
     UI_Style containerStyle = {
         .background.color = vec4_new(1,0,0,1)
     };
     ui_createRootElement(&state->uiManager);
     UI_Element* c1 = ui_create_container(&state->uiManager.root, containerTransform, containerStyle, &state->renderer);
+    EntityID container = newEntity(&state->scene);
+    ADD_COMPONENT(&state->scene, container, UI_Element, c1);
+    ADD_COMPONENT(&state->scene, container, Transform2D, &containerTransform);
     containerTransform.position = vec2_new(3, 5);
     containerStyle.background.color = vec4_new(0,1,0,1);
     UI_Element* c2 = ui_create_container(c1, containerTransform, containerStyle, &state->renderer);
@@ -76,6 +93,8 @@ void start(GameState* state){
     containerTransform.position = vec2_new(7, 2);
     containerStyle.background.color = vec4_new(0,0,1,1);
     ui_create_container(c2, containerTransform, containerStyle, &state->renderer);
+
+    subscribe_to_event(EVENT_TYPE_WINDOW_RESIZE_SET, &(EventListener){.callback = resizingCallBack});
 }
 
 void update(GameState* state){

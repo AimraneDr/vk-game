@@ -11,6 +11,10 @@ typedef struct Camera_Component_t{
     f32 nearPlane;
     f32 orthographicSize;
 
+    //affects ui
+    f32 pixelsPerPoint;
+    Vec2i viewRect;
+
     bool useOrthographic;
     Mat4 view, projection;
 }Camera;
