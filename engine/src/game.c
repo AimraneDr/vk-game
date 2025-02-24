@@ -33,7 +33,6 @@ EVENT_CALLBACK(onWiinResize){
     Camera* camera = (Camera*)listener;
     camera->viewRect.x = eContext.u32[0];
     camera->viewRect.y = eContext.u32[1];
-    LOG_INFO("Camera View Rect Resized");
 }
 
 void game_shutdown(GameState* state);

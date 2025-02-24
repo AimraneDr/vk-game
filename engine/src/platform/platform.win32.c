@@ -25,49 +25,101 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 emit_event(EVENT_TYPE_WINDOW_DEACTIVATED,(EventContext){0}, state);
             }
             break;
+        case WM_ENTERSIZEMOVE:{
+            state->display.isResizing = true;
+            break;
+        }
         case WM_SIZE:
-            if (wParam == SIZE_MINIMIZED) {
-                state->display.visibility = WINDOW_STATE_MINIMIZED;
-                emit_event(EVENT_TYPE_WINDOW_MINIMIZED,(EventContext){0}, state);
-            } else if(wParam == SIZE_MAXIMIZED){
-                state->display.width = LOWORD(lParam);
-                state->display.height = HIWORD(lParam);
-                state->display.visibility = WINDOW_STATE_MAXIMIZED;
                 EventContext context = {
-                    .u32[0] = state->display.width,
-                    .u32[1] = state->display.height
-                };
-                emit_event(EVENT_TYPE_WINDOW_MAXIMIZED, (EventContext){0}, state);
-            } else {
-                state->display.width = LOWORD(lParam);
-                state->display.height = HIWORD(lParam);
-                state->display.visibility = WINDOW_STATE_FLOATING;
-                EventContext context = {
-                    .u32[0] = state->display.width,
-                    .u32[1] = state->display.height,
-                };
-                emit_event(EVENT_TYPE_WINDOW_RESIZE_SET, context, state);
-            }
-            break;;
-        case WM_SIZING:
-            if(!state->display.isResizing) state->display.isResizing = true;
-                EventContext context = {
-                    .u32[0] = state->display.width,
-                    .u32[1] = state->display.height
-                };
-                emit_event(EVENT_TYPE_WINDOW_RESIZING,context, state);   
-            break;
-        case WM_EXITSIZEMOVE:
-            if(state->display.isResizing){
-                // use the last updated window size
-                EventContext context = {
-                    .u32[0] = state->display.width,
-                    .u32[1] = state->display.height
-                };
-                emit_event(EVENT_TYPE_WINDOW_RESIZED,context, state);  
-            }
-            break;
+        {
+            bool changed = state->display.width != LOWORD(lParam) || state->display.height != HIWORD(lParam);
+            state->display.width = LOWORD(lParam);
+            state->display.height = HIWORD(lParam);
         
+            switch (wParam)
+            {
+                case SIZE_MINIMIZED:
+                {
+                    state->display.visibility = WINDOW_STATE_MINIMIZED;
+                    emit_event(EVENT_TYPE_WINDOW_MINIMIZED, (EventContext){0}, state);
+                    break;
+                }
+                case SIZE_MAXIMIZED:
+                {
+                    state->display.visibility = WINDOW_STATE_MAXIMIZED;
+                    // Immediate resize for maximize
+                    EventContext context = {
+                        .u32[0] = state->display.width,
+                        .u32[1] = state->display.height
+                    };
+                    emit_event(EVENT_TYPE_WINDOW_RESIZED, context, state);
+                    emit_event(EVENT_TYPE_WINDOW_MAXIMIZED, (EventContext){0}, state);
+                    break;
+                }
+                case SIZE_RESTORED:
+                {
+                    // Handle restore from minimized/maximized
+                    if (state->display.visibility == WINDOW_STATE_MINIMIZED)
+                    {
+                        // Coming from minimized - special handling if needed
+                        state->display.visibility = WINDOW_STATE_FLOATING;
+                    }
+                    else if(state->display.visibility == WINDOW_STATE_MAXIMIZED)
+                    {
+                        state->display.visibility = WINDOW_STATE_FLOATING;
+                        // Only emit if dimensions actually changed
+                        if (changed)
+                        {
+                            EventContext context = {
+                                .u32[0] = state->display.width,
+                                .u32[1] = state->display.height
+                            };
+                            emit_event(EVENT_TYPE_WINDOW_RESIZED, context, state);
+                        }
+                    }
+                    break;
+                }
+            }
+            break;
+        }
+        case WM_SIZING:
+        {
+            // Update dimensions during resize
+            RECT* rect = (RECT*)lParam;
+            state->display.width = rect->right - rect->left;
+            state->display.height = rect->bottom - rect->top;
+            
+            EventContext context = {
+                .u32[0] = state->display.width,
+                .u32[1] = state->display.height
+            };
+            emit_event(EVENT_TYPE_WINDOW_RESIZING, context, state);
+            break;
+        }
+        case WM_EXITSIZEMOVE:
+        {
+            if (state->display.isResizing)
+            {
+                EventContext context = {
+                    .u32[0] = state->display.width,
+                    .u32[1] = state->display.height
+                };
+                emit_event(EVENT_TYPE_WINDOW_RESIZED, context, state);
+            }
+            state->display.isResizing = false;
+            
+            // Additional check for maximize/restore via titlebar buttons
+            if (state->display.visibility == WINDOW_STATE_MAXIMIZED ||
+                state->display.visibility == WINDOW_STATE_FLOATING)
+            {
+                EventContext context = {
+                    .u32[0] = state->display.width,
+                    .u32[1] = state->display.height
+                };
+                emit_event(EVENT_TYPE_WINDOW_RESIZED, context, state);
+            }
+            break;
+        }
         //Keyboard
         case WM_KEYDOWN:{
                 EventContext context = {

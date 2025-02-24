@@ -45,7 +45,6 @@ void recreateSwapChainObject(Renderer *r, u32 width, u32 height, WindowState vis
 static void onWindowResize(EventType eType, void *sender, void *listener, EventContext context)
 {
     ((Renderer *)listener)->framebufferResized = true;
-    LOG_INFO("frame buffer resized");
 }
 
 void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p, Scene* s)

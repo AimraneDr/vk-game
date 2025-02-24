@@ -19,9 +19,6 @@
 
 #include <math/vec3.h>
 
-EVENT_CALLBACK(resizingCallBack){
-    LOG_INFO("Triggered...!!!");
-}
 
 void config(GameConfig* config){
     
@@ -94,7 +91,6 @@ void start(GameState* state){
     containerStyle.background.color = vec4_new(0,0,1,1);
     ui_create_container(c2, containerTransform, containerStyle, &state->renderer);
 
-    subscribe_to_event(EVENT_TYPE_WINDOW_RESIZE_SET, &(EventListener){.callback = resizingCallBack});
 }
 
 void update(GameState* state){
