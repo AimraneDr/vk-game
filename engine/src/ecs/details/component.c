@@ -16,13 +16,14 @@ void ecs_register_component(Scene *scene, const char* name, u16 size)
         LOG_ERROR("cannot register component, you hit the max component types count");
         return;
     }
-    scene->pools[scene->componentTypesCount] = (ComponentPool){
-        .components = __DynamicArray_create(1, size),
-        .componentSize = size,
-        .dense = DynamicArray_Create(EntityID),
-        .sparse = malloc(sizeof(u16) * MAX_ENTITIES)};
+    ComponentPool* pool = &scene->pools[scene->componentTypesCount];
+    pool->components = __DynamicArray_create(DARRAY_INITIAL_CAPACITY, size);
+    pool->componentSize = size;
+    pool->dense = DynamicArray_Create(EntityID);
+    pool->sparse = malloc(sizeof(u16) * MAX_ENTITIES);
+    pool->type = 1 << scene->componentTypesCount;
     for(u16 i=0; i < MAX_ENTITIES; i++){
-        scene->pools[scene->componentTypesCount].sparse[i]= INVALID_ENTITY;
+        pool->sparse[i]= INVALID_ENTITY;
     }
     scene->componentNames[scene->componentTypesCount] = str_new(name);
     scene->componentTypesCount++;
@@ -41,8 +42,11 @@ void *ecs_get_component(Scene* s, EntityID e, ComponentType t)
 {
     if (!ecs_entity_has_component(s, e, t))
         return 0;
-    ComponentPool p = s->pools[__builtin_ffsll(t) - 1];
-    return &p.components[p.sparse[e]];
+    ComponentPool* p = &s->pools[__builtin_ffsll(t) - 1];
+    u16 index = p->sparse[e];
+    if(index == INVALID_ENTITY || index >= DynamicArray_Length(p->components))
+        return 0;
+    return (char*)p->components + (index * p->componentSize);
 };
 
 void ecs_add_component(Scene* s, EntityID e, ComponentType t, void *component)
@@ -51,19 +55,19 @@ void ecs_add_component(Scene* s, EntityID e, ComponentType t, void *component)
         LOG_ERROR("entity already has component");
         return;
     }
-    ComponentPool p = s->pools[__builtin_ffsll(t) - 1];
-    p.sparse[e] = DynamicArray_Length(p.components);
-    DynamicArray_Push(p.dense, e);
-    __DynamicArray_push(p.components, component);
+    ComponentPool* p = &s->pools[__builtin_ffsll(t) - 1];
+    p->sparse[e] = DynamicArray_Length(p->components);
+    DynamicArray_Push(p->dense, e);
+    p->components = __DynamicArray_push(p->components, component);
     s->EntitiesSignatures[e] |= t;
 }
 
 void ecs_remove_component(Scene* s, EntityID e, ComponentType t)
 {
-    ComponentPool p = s->pools[__builtin_ffsll(t) - 1];
-    DynamicArray_PopAt(p.dense, p.sparse[e], 0);
-    DynamicArray_PopAt(p.components, p.sparse[e], 0);
-    p.sparse[e] = -1;
+    ComponentPool* p = &s->pools[__builtin_ffsll(t) - 1];
+    DynamicArray_PopAt(p->dense, p->sparse[e], 0);
+    DynamicArray_PopAt(p->components, p->sparse[e], 0);
+    p->sparse[e] = -1;
 }
 
 void ecs_remove_all_components(Scene* s, EntityID e)

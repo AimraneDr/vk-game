@@ -43,7 +43,6 @@ typedef struct UI_Element_t{
     struct UI_Element_t* parent;
     struct UI_Element_t* children;
 
-    Transform2D transform;
 
     UI_Style style;
     u32 order;             // Render order priority

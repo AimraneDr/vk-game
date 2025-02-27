@@ -47,8 +47,10 @@ static void onWindowResize(EventType eType, void *sender, void *listener, EventC
     ((Renderer *)listener)->framebufferResized = true;
 }
 
-void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p, Scene* s)
+void renderer_init(RendererInitConfig config, GameState* gState)
 {
+    Renderer* r = &gState->renderer;
+    PlatformState* p = &gState->platform;
     r->gpu = VK_NULL_HANDLE;
     r->currentFrame = 0;
     r->framebufferResized = false;
@@ -82,7 +84,7 @@ void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p, Sce
     createCommandBuffer(r->device, r->commandPool, r->commandBuffers);
     createSyncObjects(r->device, r->sync.imageAvailableSemaphores, r->sync.renderFinishedSemaphores, r->sync.inFlightFences);
 
-    ecs_systems_start_group(s, SYSTEM_GROUP_RENDERING);
+    ecs_systems_start_group(gState, SYSTEM_GROUP_RENDERING);
 
     // Subscribe to Events
     EventListener onResizeListener = {
@@ -93,13 +95,14 @@ void renderer_init(RendererInitConfig config, Renderer *r, PlatformState *p, Sce
     return;
 };
 
-void renderer_shutdown(Renderer *r, Scene* s)
+void renderer_shutdown(GameState* gState)
 {    
+    Renderer *r = &gState->renderer;
     vkDeviceWaitIdle(r->device);
 
     destroySyncObjects(r->device, r->sync.imageAvailableSemaphores, r->sync.renderFinishedSemaphores, r->sync.inFlightFences);
 
-    ecs_systems_destroy_group(s, SYSTEM_GROUP_RENDERING);
+    ecs_systems_destroy_group(gState, SYSTEM_GROUP_RENDERING);
     
     destroyCommandBuffer(r->device, r->commandPool, r->commandBuffers);
     destroyCommandPool(r->device, r->commandPool);
@@ -117,14 +120,11 @@ void renderer_shutdown(Renderer *r, Scene* s)
     return;
 };
 
-void renderer_draw(
-    Camera *camera, 
-    Renderer *r, PlatformState *p, 
-    Scene* scene,
-    f64 deltatime,
-    UI_Manager* uiManager
-)
+void renderer_draw(GameState* gState)
 {
+    Renderer* r = &gState->renderer;
+    PlatformState* p = &gState->platform;
+
     vkWaitForFences(r->device, 1, &r->sync.inFlightFences[r->currentFrame], VK_TRUE, U64_MAX);
     
     u32 imageIndex;
@@ -142,16 +142,7 @@ void renderer_draw(
     vkResetFences(r->device, 1, &r->sync.inFlightFences[r->currentFrame]);
     vkResetCommandBuffer(r->commandBuffers[r->currentFrame], 0);
 
-    recordCommandBuffer(
-        r->commandBuffers[r->currentFrame], 
-        r->renderPass, 
-        r->swapchainFrameBuffers, 
-        r->swapchainExtent, 
-        imageIndex,
-        scene,
-        uiManager,
-        deltatime
-    );
+    recordCommandBuffer(gState, imageIndex);
 
     VkSemaphore waitSemaphores[] = {r->sync.imageAvailableSemaphores[r->currentFrame]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};

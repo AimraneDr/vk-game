@@ -19,5 +19,5 @@ void destroyEntity(Scene* s, EntityID e){
 
 bool ecs_entity_has_component(Scene* s, EntityID e, ComponentType t)
 {
-    return s->EntitiesSignatures[e] && t == t;
+    return (s->EntitiesSignatures[e] & t) == t;
 }

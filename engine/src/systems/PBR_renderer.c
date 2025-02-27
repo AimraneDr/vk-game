@@ -15,6 +15,7 @@
 #include <math/trigonometry.h>
 
 #include "ecs/ecs.h"
+#include "game.h"
 
 typedef struct PBR_renderer_InternalState_t{
     const Renderer* r;
@@ -24,10 +25,11 @@ typedef struct PBR_renderer_InternalState_t{
 }PBR_renderer_InternalState;
 
 
-void pbr_renderer_init(void* _state, Scene* scene);
-void pbr_renderer_update(void* _state, Scene* scene, f32 deltatime);
-void pbr_renderer_update_mesh(void* _state, Scene* scene, EntityID e, f32 deltatime);
-void pbr_renderer_shutdown(void* _state, Scene* scene);
+static void start(void* _state, void* gState);
+static void update(void* _state, void* gState);
+static void update_entity(void* _state, void* gState, EntityID e);
+static void destroy(void* _state, void* gState);
+static void destroy_entity(void* _state, void* gState, EntityID e);
 
 VkVertexInputBindingDescription _getVertexInputBindingDescription();
 void _getVertexInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDescription** outAttribDescs);
@@ -44,10 +46,11 @@ System PBR_renderer_get_system_ref(Scene* scene, Renderer* r, Camera* camera){
     s->camera = camera;
     return (System){
         .Signature = ecs_get_component_type(scene, "MeshRenderer") | ecs_get_component_type(scene, "Transform"),
-        .start = pbr_renderer_init,
-        .update = pbr_renderer_update,
-        .updateEntity = pbr_renderer_update_mesh,
-        .destroy = pbr_renderer_shutdown,
+        .start = start,
+        .update = update,
+        .updateEntity = update_entity,
+        .destroy = destroy,
+        .destroyEntity = destroy_entity,
         .state = s
     };
 }
@@ -60,10 +63,11 @@ System PBR_renderer_get_system_ref(Scene* scene, Renderer* r, Camera* camera){
 /////////////////////////////////////
 
 
-void pbr_renderer_init(void* _state, Scene* scene){
+void start(void* _state, void* gState){
     //initialize the pipeline
     PBR_renderer_InternalState* state = _state;
-    createDescriptorSetLayout(state->r->device, &state->graphicsPipeline.descriptorSetLayout);
+    Renderer* r = &((GameState*)gState)->renderer;
+    createDescriptorSetLayout(r->device, &state->graphicsPipeline.descriptorSetLayout);
 
     PipelineConfig config = {
         .get_vertex_binding_desc = _getVertexInputBindingDescription,
@@ -78,37 +82,42 @@ void pbr_renderer_init(void* _state, Scene* scene){
         .dst_color_blend_factor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA
     };
     create_graphics_pipeline(
-        state->r->device,
+        r->device,
         "shaders/default/vert.spv", "shaders/default/frag.spv",
-        state->r->swapchainExtent,
-        state->r->msaaSamples,
-        state->r->renderPass,
+        r->swapchainExtent,
+        r->msaaSamples,
+        r->renderPass,
         state->graphicsPipeline.descriptorSetLayout,
         &config,
         &state->graphicsPipeline.pipelineLayout,
         &state->graphicsPipeline.ref
     );
-    createUniformBuffers(state->r->gpu, state->r->device, sizeof(PBR_GLOBAL_UBO), state->graphicsPipeline.uniform.global.buffers, state->graphicsPipeline.uniform.global.buffersMemory, state->graphicsPipeline.uniform.global.buffersMapped);
+    createUniformBuffers(r->gpu, r->device, sizeof(PBR_GLOBAL_UBO), state->graphicsPipeline.uniform.global.buffers, state->graphicsPipeline.uniform.global.buffersMemory, state->graphicsPipeline.uniform.global.buffersMapped);
 
-    createTextureImage(state->r->gpu, state->r->device, state->r->commandPool, state->r->queue.graphics, &state->r->mipLevels, &state->graphicsPipeline.textureImage, &state->graphicsPipeline.textureImageMemory);
-    createTextureImageView(state->r->device, state->graphicsPipeline.textureImage, state->r->mipLevels, &state->graphicsPipeline.textureImageView);
-    createTextureImageSampler(state->r->gpu, state->r->device, state->r->mipLevels, &state->graphicsPipeline.textureSampler);
+    createTextureImage(r->gpu, r->device, r->commandPool, r->queue.graphics, &r->mipLevels, &state->graphicsPipeline.textureImage, &state->graphicsPipeline.textureImageMemory);
+    createTextureImageView(r->device, state->graphicsPipeline.textureImage, r->mipLevels, &state->graphicsPipeline.textureImageView);
+    createTextureImageSampler(r->gpu, r->device, r->mipLevels, &state->graphicsPipeline.textureSampler);
 
-    createDescriptorPool(state->r->device, &state->graphicsPipeline.descriptorPool);
-    createDescriptorSets(state->r->device, state->graphicsPipeline.descriptorSetLayout, state->graphicsPipeline.descriptorPool, state->graphicsPipeline.uniform.global.buffers, state->graphicsPipeline.textureImageView, state->graphicsPipeline.textureSampler,state->graphicsPipeline.descriptorSets);
+    createDescriptorPool(r->device, &state->graphicsPipeline.descriptorPool);
+    createDescriptorSets(r->device, state->graphicsPipeline.descriptorSetLayout, state->graphicsPipeline.descriptorPool, state->graphicsPipeline.uniform.global.buffers, state->graphicsPipeline.textureImageView, state->graphicsPipeline.textureSampler,state->graphicsPipeline.descriptorSets);
 }
 
-void pbr_renderer_update(void* _state, Scene* scene, f32 deltatime){
+void update(void* _state, void* gState){
     PBR_renderer_InternalState* state = _state;
+    Renderer* r = &((GameState*)gState)->renderer;
+    f32 dt =  ((GameState*)gState)->clock.deltaTime;
+    
  
-    updateGlobalUniformBuffer(state->r->currentFrame, state->graphicsPipeline.uniform.global.buffersMapped, deltatime, state->camera);
+    updateGlobalUniformBuffer(r->currentFrame, state->graphicsPipeline.uniform.global.buffersMapped, dt, state->camera);
 
-    vkCmdBindPipeline(state->r->commandBuffers[state->r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->graphicsPipeline.ref);
-    vkCmdBindDescriptorSets(state->r->commandBuffers[state->r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->graphicsPipeline.pipelineLayout, 0, 1, state->graphicsPipeline.descriptorSets, 0, 0);
+    vkCmdBindPipeline(r->commandBuffers[r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->graphicsPipeline.ref);
+    vkCmdBindDescriptorSets(r->commandBuffers[r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->graphicsPipeline.pipelineLayout, 0, 1, state->graphicsPipeline.descriptorSets, 0, 0);
 }
 
-void pbr_renderer_update_mesh(void* _state, Scene* scene, EntityID e, f32 deltatime){
+void update_entity(void* _state, void* gState, EntityID e){
     PBR_renderer_InternalState* state = _state;
+    Renderer* r = &((GameState*)gState)->renderer;
+    Scene* scene = &((GameState*)gState)->scene;
 
     MeshRenderer* m = GET_COMPONENT(scene, e, MeshRenderer);
     Transform* t = GET_COMPONENT(scene, e, Transform);
@@ -125,29 +134,38 @@ void pbr_renderer_update_mesh(void* _state, Scene* scene, EntityID e, f32 deltat
     VkBuffer vertexBuffers[] = { m->renderContext.vertexBuffer};
     VkDeviceSize offsets[] = {0};
     vkCmdPushConstants(
-        state->r->commandBuffers[state->r->currentFrame],
+        r->commandBuffers[r->currentFrame],
         state->graphicsPipeline.pipelineLayout,
         VK_SHADER_STAGE_VERTEX_BIT,
         0,
         sizeof(PBR_PushConstant),
         &pc
     );
-    vkCmdBindVertexBuffers(state->r->commandBuffers[state->r->currentFrame], 0, 1, vertexBuffers, offsets);
-    vkCmdBindIndexBuffer(state->r->commandBuffers[state->r->currentFrame], m->renderContext.indexBuffer,0, VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(state->r->commandBuffers[state->r->currentFrame], m->indicesCount, 1, 0, 0, 0);
+    vkCmdBindVertexBuffers(r->commandBuffers[r->currentFrame], 0, 1, vertexBuffers, offsets);
+    vkCmdBindIndexBuffer(r->commandBuffers[r->currentFrame], m->renderContext.indexBuffer,0, VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(r->commandBuffers[r->currentFrame], m->indicesCount, 1, 0, 0, 0);
 }
 
-void pbr_renderer_shutdown(void* _state, Scene* scene){
+void destroy(void* _state, void* gState){
     PBR_renderer_InternalState* state = _state;
-    destroyUniformBuffers(state->r->device, state->graphicsPipeline.uniform.global.buffers, state->graphicsPipeline.uniform.global.buffersMemory);
-    destroyTextureSampler(state->r->device, state->graphicsPipeline.textureSampler);
-    destroyTextureImageView(state->r->device, state->graphicsPipeline.textureImageView);
-    destroyTextureImage(state->r->device, state->graphicsPipeline.textureImage, state->graphicsPipeline.textureImageMemory);
-    destroyPipeline(state->r->device, &state->graphicsPipeline.ref, state->graphicsPipeline.pipelineLayout);
-    destroyDescriptorPool(state->r->device, state->graphicsPipeline.descriptorPool);
-    destroyDescriptorSetLayout(state->r->device, state->graphicsPipeline.descriptorSetLayout);
+    Renderer* r = &((GameState*)gState)->renderer;
+
+    vkDeviceWaitIdle(r->device);
+    
+    destroyUniformBuffers(r->device, state->graphicsPipeline.uniform.global.buffers, state->graphicsPipeline.uniform.global.buffersMemory);
+    destroyTextureSampler(r->device, state->graphicsPipeline.textureSampler);
+    destroyTextureImageView(r->device, state->graphicsPipeline.textureImageView);
+    destroyTextureImage(r->device, state->graphicsPipeline.textureImage, state->graphicsPipeline.textureImageMemory);
+    destroyPipeline(r->device, &state->graphicsPipeline.ref, state->graphicsPipeline.pipelineLayout);
+    destroyDescriptorPool(r->device, state->graphicsPipeline.descriptorPool);
+    destroyDescriptorSetLayout(r->device, state->graphicsPipeline.descriptorSetLayout);
 }
 
+void destroy_entity(void* _state, void* gState, EntityID e){
+    PBR_renderer_InternalState* state = _state;
+    MeshRenderer* m = GET_COMPONENT(&((GameState*)gState)->scene, e, MeshRenderer);
+    destroyMeshRenderer(&((GameState*)gState)->renderer, m);
+}
 ///////////////////////////////
 ///////////////////////////////
 /////      INTERNAL     ///////

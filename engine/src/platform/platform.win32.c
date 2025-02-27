@@ -30,7 +30,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             break;
         }
         case WM_SIZE:
-                EventContext context = {
         {
             bool changed = state->display.width != LOWORD(lParam) || state->display.height != HIWORD(lParam);
             state->display.width = LOWORD(lParam);

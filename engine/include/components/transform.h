@@ -15,7 +15,6 @@ typedef struct Transform_Component_t{
 typedef struct Transform2D_Component_t{
     Vec2 position;
     Vec2 scale;
-    Vec2 pivot;
     Mat3 mat;
     f32 rotation;
 }Transform2D;

@@ -15,9 +15,7 @@ typedef struct MeshRenderer_Component_t{
         VkBuffer indexBuffer;
         VkDeviceMemory indexBufferMemory;
     }renderContext;
-    //model matrix
-    //TODO: already in transform component
-    Mat4 mat4;
+    
     u32 indicesCount;
 }MeshRenderer;
 

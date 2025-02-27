@@ -20,9 +20,10 @@ typedef enum SystemGroup_e{
 
 typedef struct ComponentPool{
     u16* sparse;
-    u16* dense;         //DynamicArray
+    EntityID* dense;         //DynamicArray
     void* components;   //DynamicArray
     u16 componentSize;
+    ComponentType type;
 }ComponentPool;
 
 typedef struct Scene_t Scene;
@@ -32,16 +33,16 @@ typedef struct System_t{
     void* state;
     
     //functions
-    void (*start)(void* _state, Scene* scene);
-    void (*startEntity)(void* _state, Scene* scene, EntityID e);
-    void (*preUpdate)(void* _state, Scene* scene, f32 deltatime);
-    void (*preUpdateEntity)(void* _state, Scene* scene, EntityID e, f32 deltatime);
-    void (*update)(void* _state, Scene* scene, f32 deltatime);
-    void (*updateEntity)(void* _state, Scene* scene, EntityID e, f32 deltatime);
-    void (*postUpdate)(void* _state, Scene* scene, f32 deltatime);
-    void (*postUpdateEntity)(void* _state, Scene* scene, EntityID e, f32 deltatime);
-    void (*destroy)(void* _state, Scene* scene);
-    void (*destroyEntity)(void* _state, Scene* scene, EntityID e);
+    void (*start)(void* sState, void* gState);
+    void (*startEntity)(void* sys_state, void* gState, EntityID e);
+    void (*preUpdate)(void* sys_state, void* gState);
+    void (*preUpdateEntity)(void* sys_state, void* gState, EntityID e);
+    void (*update)(void* sys_state, void* gState);
+    void (*updateEntity)(void* sys_state, void* gState, EntityID e);
+    void (*postUpdate)(void* sys_state, void* gState);
+    void (*postUpdateEntity)(void* sys_state, void* gState, EntityID e);
+    void (*destroy)(void* sys_state, void* gState);
+    void (*destroyEntity)(void* sys_state, void* gState, EntityID e);
 }System;
 
 //TODO: rename to : World, ecs_manager, 

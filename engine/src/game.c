@@ -13,6 +13,7 @@
 
 #include "components/transform.h"
 #include "components/meshRenderer.h"
+#include "components/characterController.h"
 
 #include "systems/PBR_renderer.h"
 #include "systems/UI_renderer.h"
@@ -31,8 +32,11 @@ EVENT_CALLBACK(onActivated){
 
 EVENT_CALLBACK(onWiinResize){
     Camera* camera = (Camera*)listener;
-    camera->viewRect.x = eContext.u32[0];
-    camera->viewRect.y = eContext.u32[1];
+    PlatformState* p = sender;
+
+    camera->viewRect.x = p->display.width;
+    camera->viewRect.y = p->display.height;
+    LOG_WARN("CHeck out new sizes : %.2f x %.2f", eContext.u32[0],eContext.u32[1]);
 }
 
 void game_shutdown(GameState* state);
@@ -88,9 +92,7 @@ void game_init(GameConfig config, GameState* out){
     RegisterDefaultComponents(&out->scene);
     RegisterDefaultSystems(&out->scene, &out->renderer, &out->camera);
 
-    renderer_init(config.renderer, &out->renderer, &out->platform, &out->scene);
-
-    out->meshRenderers = DynamicArray_Create(MeshRenderer);
+    renderer_init(config.renderer, out);
 
     return;
 }
@@ -125,26 +127,26 @@ void game_run(GameInterface Interface){
     //user specific startup
     if(Interface.start) Interface.start(&state);
 
-    ecs_systems_initialize(&state.scene);
+    ecs_systems_initialize(&state);
     clock_start(&state.clock);
     while (!state.platform.display.shouldClose)
     {
         if(!state.suspended){
             clock_tick(&state.clock);
             
-            renderer_draw(&state.camera, &state.renderer, &state.platform, &state.scene, state.clock.deltaTime, &state.uiManager);
+            renderer_draw(&state);
             
             if(Interface.update) Interface.update(&state);
             if(is_key_down(&state.inputer, KEY_P)){
                 LOG_DEBUG("%.2f FPS", 1 /state.clock.deltaTime);
             }
-            ecs_systems_update(&state.scene, state.clock.deltaTime);
+            ecs_systems_update(&state);
         }
         input_system_update(&state.inputer, state.clock.deltaTime);
         window_PullEvents(&state.platform);
     }
 
-    ecs_systems_shutdown(&state.scene);
+    ecs_systems_shutdown(&state);
     if(Interface.cleanup) Interface.cleanup(&state);
     
     game_shutdown(&state);
@@ -153,9 +155,8 @@ void game_run(GameInterface Interface){
 
 void game_shutdown(GameState* state){
 
-    DynamicArray_Destroy(state->meshRenderers);
     asset_manager_shutdown(&state->assetManager);
-    renderer_shutdown(&state->renderer, &state->scene);
+    renderer_shutdown(state);
     ecs_shutdown(&state->scene);
     window_destroy(&state->platform);
 
@@ -223,6 +224,7 @@ void RegisterDefaultComponents(Scene* scene){
     REGIATER_COMPONENT(scene, Transform2D);
     REGIATER_COMPONENT(scene, MeshRenderer);
     REGIATER_COMPONENT(scene, UI_Element);
+    REGIATER_COMPONENT(scene, CharacterController);
 }
 
 void RegisterDefaultSystems(Scene* scene, Renderer* r, Camera* camera){

@@ -19,6 +19,7 @@
 
 #include <math/vec3.h>
 
+#include "systems/ui.h"
 
 void config(GameConfig* config){
     
@@ -45,19 +46,21 @@ void config(GameConfig* config){
 
 void start(GameState* state){
     state->camera.pixelsPerPoint = 50.f;
+    System sys = game_ui_system_ref(&state->scene, &state->renderer);
+    ecs_register_system(&state->scene, &sys);
+
 
     Asset a = load_asset(&state->assetManager, "./../resources/models/viking_room.obj");
     Asset a1 = load_asset(&state->assetManager, "./../resources/models/cube.obj");
     MeshRenderer mesh0,mesh1;
     createMeshRenderer(a.data, &state->renderer, &mesh0);
     createMeshRenderer(a1.data, &state->renderer, &mesh1);
-    DynamicArray_Push(state->meshRenderers, mesh0);
-    DynamicArray_Push(state->meshRenderers, mesh1);
     release_asset(&state->assetManager, &a);
     release_asset(&state->assetManager, &a1);
 
     //test ecs entity
     EntityID vikingRoom0 = newEntity(&state->scene);
+    EntityID cube = newEntity(&state->scene);
     Transform initT = {
         .position = {1,0,1},
         .rotation = {45,0,0},
@@ -65,38 +68,21 @@ void start(GameState* state){
     };
     ADD_COMPONENT(&state->scene, vikingRoom0, Transform, &initT);
     ADD_COMPONENT(&state->scene, vikingRoom0, MeshRenderer, &mesh0);
-
-    Transform2D containerTransform = {
-        .position = {0.f, 0.f},
-        .scale = {1.f, 1.f},
-        .rotation = 90.f,
-        .pivot = {0.f ,0.f}
-    };
-    UI_Style containerStyle = {
-        .background.color = vec4_new(1,0,0,1)
-    };
-    ui_createRootElement(&state->uiManager);
-    UI_Element* c1 = ui_create_container(&state->uiManager.root, containerTransform, containerStyle, &state->renderer);
-    EntityID container = newEntity(&state->scene);
-    ADD_COMPONENT(&state->scene, container, UI_Element, c1);
-    ADD_COMPONENT(&state->scene, container, Transform2D, &containerTransform);
-    containerTransform.position = vec2_new(3, 5);
-    containerStyle.background.color = vec4_new(0,1,0,1);
-    UI_Element* c2 = ui_create_container(c1, containerTransform, containerStyle, &state->renderer);
-
-    containerTransform.position = vec2_new(2, 2);
-    containerStyle.background.color = vec4_new(0,0,1,1);
-    ui_create_container(c2, containerTransform, containerStyle, &state->renderer);
-    containerTransform.position = vec2_new(7, 2);
-    containerStyle.background.color = vec4_new(0,0,1,1);
-    ui_create_container(c2, containerTransform, containerStyle, &state->renderer);
+    initT.position = vec3_new(-1,0,-1);
+    ADD_COMPONENT(&state->scene, cube, Transform, &initT);
+    ADD_COMPONENT(&state->scene, cube, MeshRenderer, &mesh1);
 
 }
 
-void update(GameState* state){
+static void update(GameState* state){
     if(is_key_down(&state->inputer, KEY_O)){
         state->camera.useOrthographic=!state->camera.useOrthographic;
     }
+
+    if(is_key_down(&state->inputer, KEY_C)){
+        LOG_DEBUG("camera rect : %.2f x %.2f", state->camera.viewRect.x,state->camera.viewRect.y);
+    }
+
     static f32 changeSpeed = .5;
     if(state->inputer.mouse.scrollDelta != 0){
         if(state->camera.useOrthographic){
@@ -105,31 +91,8 @@ void update(GameState* state){
             state->camera.fieldOfView += state->inputer.mouse.scrollDelta * changeSpeed;
         }
     }
-    static float angle = 0;
-    angle += state->clock.deltaTime * deg_to_rad(90.0f);
-    i8 dir = 1;
-    f32 scale = 1.f;
-    for(u32 i=0; i < DynamicArray_Length(state->meshRenderers); i++){
-        state->meshRenderers[i].mat4 = mat4_mul(
-            mat4_scaling((Vec3){scale, scale, scale}),
-            mat4_mul(
-                mat4_rotation(angle, (Vec3){.0f, 1.0f, .0f}),
-                mat4_translation((Vec3){dir * 1.f, 0.f, dir * 1.f})
-            )
-        );
-        dir*=-1;
-        scale  = scale == 1.f ? 1.5f : 1.f;
-    }
-
-    state->uiManager.root.children[0].transform.rotation+= 45.0f * state->clock.deltaTime;
 }
-void cleanup(GameState* state){
-    u32 length = DynamicArray_Length(state->meshRenderers);
-    for(u32 i=0; i < length; i++){
-        destroyMeshRenderer(&state->renderer, &state->meshRenderers[i]);
-    }
-
-    ui_destroyElement(&state->uiManager.root, &state->renderer);
+static void cleanup(GameState* state){
 }
 
 int main(){

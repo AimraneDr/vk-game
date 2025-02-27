@@ -44,8 +44,6 @@ typedef struct GameState{
     //components
     Camera camera;
 
-    MeshRenderer* meshRenderers;
-
     Scene scene;
     bool suspended;
 }GameState;

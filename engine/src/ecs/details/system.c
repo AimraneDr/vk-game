@@ -51,25 +51,26 @@ EntityID *getTargetedEntities(Scene* s, Mask systemSignature, ComponentPool *poo
     return matchedEntities;
 }
 
-void ecs_systems_initialize(Scene* s){
-    ecs_systems_start_group(s, SYSTEM_GROUP_GAME);
+void ecs_systems_initialize(GameState* gState){
+    ecs_systems_start_group(gState, SYSTEM_GROUP_GAME);
 }
-void ecs_systems_update(Scene* s, f32 deltatime){
-    ecs_systems_update_group(s, deltatime, SYSTEM_GROUP_GAME);
+void ecs_systems_update(GameState* gState){
+    ecs_systems_update_group(gState, SYSTEM_GROUP_GAME);
 }
-void ecs_systems_shutdown(Scene* s){
-    ecs_systems_destroy_group(s, SYSTEM_GROUP_GAME);
+void ecs_systems_shutdown(GameState* gState){
+    ecs_systems_destroy_group(gState, SYSTEM_GROUP_GAME);
 }
 
-void ecs_systems_start_group(Scene* s, SystemGroup group)
+void ecs_systems_start_group(GameState* gState, SystemGroup group)
 {
+    Scene* s = &gState->scene;
     System* systems = s->systemGroups[group];
     u32 sysCount = DynamicArray_Length(systems);
     for (u16 i = 0; i < sysCount; i++)
     {
         System *sys = &systems[i];
         
-        if(sys->start) sys->start(sys->state, s);
+        if(sys->start) sys->start(sys->state, gState);
 
         u8 poolIndex = getSmallestPoolIndex(s, sys->Signature);
         if (poolIndex == MAX_COMPONENT_TYPES)
@@ -83,35 +84,36 @@ void ecs_systems_start_group(Scene* s, SystemGroup group)
         // Process collected entities
         for (u32 j = 0; j < DynamicArray_Length(targets); j++)
         {
-            if(sys->startEntity) sys->startEntity(sys->state, s, targets[j]);
+            if(sys->startEntity) sys->startEntity(sys->state, gState, targets[j]);
         }
 
         DynamicArray_Destroy(targets);
     }
 }
 
-void ecs_systems_update_group(Scene* s, f32 deltatime, SystemGroup group)
+void ecs_systems_update_group(GameState* gState, SystemGroup group)
 {
-    System* systems = s->systemGroups[group];
+    Scene* scene = &gState->scene;
+    System* systems = scene->systemGroups[group];
     for (u16 i = 0; i < DynamicArray_Length(systems); i++)
     {
         System *sys = &systems[i];
-        if(sys->update) sys->update(sys->state, s, deltatime);
+        if(sys->update) sys->update(sys->state, gState);
 
-        u8 poolIndex = getSmallestPoolIndex(s, sys->Signature);
+        u8 poolIndex = getSmallestPoolIndex(scene, sys->Signature);
         if (poolIndex == MAX_COMPONENT_TYPES)
         {
             LOG_ERROR("Could not fint any of the component types from system signature!");
             return;
         }
-        ComponentPool *pool = &s->pools[poolIndex];
+        ComponentPool *pool = &scene->pools[poolIndex];
 
-        EntityID *targets = getTargetedEntities(s, sys->Signature, pool);
+        EntityID *targets = getTargetedEntities(scene, sys->Signature, pool);
         // Process collected entities
 
         for (u32 j = 0; j < DynamicArray_Length(targets); j++)
         {
-            if(sys->updateEntity) sys->updateEntity(sys->state, s, targets[j], deltatime);
+            if(sys->updateEntity) sys->updateEntity(sys->state, gState, targets[j]);
         }
 
         DynamicArray_Destroy(targets);
@@ -119,27 +121,28 @@ void ecs_systems_update_group(Scene* s, f32 deltatime, SystemGroup group)
     }
 }
 
-void ecs_systems_destroy_group(Scene* s, SystemGroup group)
+void ecs_systems_destroy_group(GameState* gState, SystemGroup group)
 {
-    System* systems = s->systemGroups[group];
+    Scene* scene = &gState->scene;
+    System* systems = scene->systemGroups[group];
     for (u16 i = 0; i < DynamicArray_Length(systems); i++)
     {
         System *sys = &systems[i];
-        u8 poolIndex = getSmallestPoolIndex(s, sys->Signature);
+        u8 poolIndex = getSmallestPoolIndex(scene, sys->Signature);
         if (poolIndex == MAX_COMPONENT_TYPES)
         {
             LOG_ERROR("Could not fint any of the component types from system signature!");
             return;
         }
-        ComponentPool *pool = &s->pools[poolIndex];
-        EntityID *targets = getTargetedEntities(s, sys->Signature, pool);
+        ComponentPool *pool = &scene->pools[poolIndex];
+        EntityID *targets = getTargetedEntities(scene, sys->Signature, pool);
         // Process collected entities
         for (u32 j = 0; j < DynamicArray_Length(targets); j++)
         {
-            if(sys->destroyEntity) sys->destroyEntity(sys->state, s, targets[j]);
+            if(sys->destroyEntity) sys->destroyEntity(sys->state, gState, targets[j]);
         }
 
-        if(sys->destroy) sys->destroy(sys->state, s);
+        if(sys->destroy) sys->destroy(sys->state, gState);
 
         DynamicArray_Destroy(targets);
     }

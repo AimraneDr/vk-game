@@ -16,14 +16,14 @@ static const UI_Vertex ui_vertices[] = {
 
 const u16 indicesCount = 6;
 static const u32 ui_indices[] = {
-    0,1,2, 2,3,0
+    0,2,1, 2,0,3
 };
 
-UI_Element* ui_create_container(UI_Element* parent, Transform2D transform, UI_Style style, Renderer* r){
+UI_Element ui_create_container(UI_Style style, Renderer* r){
     
-    UI_Element* new = ui_createElement(parent, transform, style);
+    UI_Element new = ui_createElement(style);
 
-    new->renderer.indicesCount = indicesCount;
+    new.renderer.indicesCount = indicesCount;
 
     createVertexBuffer(
         r->gpu,
@@ -31,8 +31,8 @@ UI_Element* ui_create_container(UI_Element* parent, Transform2D transform, UI_St
         r->queue.graphics,
         r->commandPool,
         verticesCount, ui_vertices, sizeof(UI_Vertex),
-        &new->renderer.vertexBuffer,
-        &new->renderer.vertexBufferMemory
+        &new.renderer.vertexBuffer,
+        &new.renderer.vertexBufferMemory
     );
     createIndexBuffer(
         r->gpu,
@@ -40,8 +40,8 @@ UI_Element* ui_create_container(UI_Element* parent, Transform2D transform, UI_St
         r->queue.graphics,
         r->commandPool,
         indicesCount, ui_indices,
-        &new->renderer.indexBuffer,
-        &new->renderer.indexBufferMemory
+        &new.renderer.indexBuffer,
+        &new.renderer.indexBufferMemory
     );
     return new;
 }

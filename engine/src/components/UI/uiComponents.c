@@ -23,18 +23,6 @@ void popChildAt(UI_Element* arr, u32 i, UI_Element* out);
 void swapChildren(UI_Element* arr, u32 i0, u32 i1);
 
 
-void ui_createRootElement(UI_Manager* manager){
-    manager->root = (UI_Element){0};
-    manager->root.children = createChildrenArray();
-    manager->root.order = 0;
-    manager->root.parent = 0;
-    manager->root.transform = (Transform2D){
-        .position = {0.f, 0.f},
-        .scale = {1.f, .1f},
-        .rotation = 0.f
-    };
-}
-
 u32 ui_elementChildrenCount(UI_Element* element){
     return getChildrenArrayLength(element->children);
 }
@@ -43,24 +31,25 @@ void ui_appendChild(UI_Element* parent, UI_Element* child){
     pushChild(parent->children, child);
 }
 
-UI_Element* ui_createElement(UI_Element* parent, Transform2D t, UI_Style s){
+UI_Element ui_createElement(UI_Style s){
     UI_Element new = {
-        .parent = parent,
+        .parent = 0,
         .children = createChildrenArray(),
-        .transform = t,
         .style = s,
-        .order = getChildrenArrayLength(parent->children),
+        .order = 0,
         .renderer = {0}
     };
-    pushChild(&parent->children, &new);
-    return &parent->children[new.order];
+    // pushChild(&parent->children, &new);
+    return new;
 }
 
 void ui_destroyElement(UI_Element* e, Renderer* r){
     // destroy sub childre arrays
     // TODO: make the darray use arenas so destroying all sub elements can be done in one step
-    for(i32 i=getChildrenArrayLength(e->children)-1; i >= 0; i--){
-        ui_destroyElement(&e->children[i], r);
+    if(e->children != 0){
+        for(i32 i=getChildrenArrayLength(e->children)-1; i >= 0; i--){
+            ui_destroyElement(&e->children[i], r);
+        }
     }
     // pop it from parent
     if(e->parent != 0){
@@ -72,6 +61,7 @@ void ui_destroyElement(UI_Element* e, Renderer* r){
     //destroy this element
     //free mem if allocated
     if(e->renderer.indicesCount != 0){
+        vkDeviceWaitIdle(r->device);
         e->renderer.indicesCount = 0;
         if(e->renderer.vertexBuffer != 0) vkDestroyBuffer(r->device, e->renderer.vertexBuffer, 0);
         if(e->renderer.vertexBufferMemory != 0) vkFreeMemory(r->device, e->renderer.vertexBufferMemory, 0);

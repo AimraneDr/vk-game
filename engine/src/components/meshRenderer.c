@@ -9,7 +9,6 @@
 void createMeshRenderer(Model* model, Renderer* renderer, MeshRenderer* out){
     // create buffers
     out->indicesCount = model->index_count;
-    out->mat4 = MAT4_IDENTITY;
     createVertexBuffer(
         renderer->gpu,
         renderer->device,

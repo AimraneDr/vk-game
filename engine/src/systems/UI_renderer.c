@@ -14,7 +14,7 @@
 #include <math/mat.h>
 #include <math/vec2.h>
 #include <math/trigonometry.h>
-
+#include "game.h"
 #include "ecs/ecs.h"
 
 typedef struct UI_renderer_InternalState_t{
@@ -24,10 +24,10 @@ typedef struct UI_renderer_InternalState_t{
 }UI_renderer_InternalState;
 
 
-void ui_renderer_init(void* _state, Scene* scene);
-void ui_renderer_update(void* _state, Scene* scene, f32 deltatime);
-void ui_renderer_update_mesh(void* _state, Scene* scene, EntityID e, f32 deltatime);
-void ui_renderer_shutdown(void* _state, Scene* scene);
+static void start(void* _state, void* gState);
+static void update(void* _state, void* gState);
+static void update_entity(void* _state, void* gState, EntityID e);
+static void destroy(void* _state, void* gState);
 
 VkVertexInputBindingDescription ui_getVertexInputBindingDescription();
 void ui_getVertexInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDescription** outAttribDescs);
@@ -45,10 +45,10 @@ System UI_renderer_get_system_ref(Scene* scene, Renderer* r, Camera* camera){
     s->camera = camera;
     return (System){
         .Signature = COMPONENT_TYPE(scene, Transform2D) | COMPONENT_TYPE(scene, UI_Element),
-        .start = ui_renderer_init,
-        .update = ui_renderer_update,
-        .updateEntity = ui_renderer_update_mesh,
-        .destroy = ui_renderer_shutdown,
+        .start = start,
+        .update = update,
+        .updateEntity = update_entity,
+        .destroy = destroy,
         .state = s
     };
 }
@@ -61,10 +61,11 @@ System UI_renderer_get_system_ref(Scene* scene, Renderer* r, Camera* camera){
 /////////////////////////////////////
 
 
-void ui_renderer_init(void* _state, Scene* scene){
+void start(void* _state, void* gState){
     //initialize the pipeline
     UI_renderer_InternalState* state = _state;
-    ui_createDescriptorSetLayout(state->r->device, &state->grapgicsPipeline.descriptorSetLayout);
+    Renderer* r = &((GameState*)gState)->renderer;
+    ui_createDescriptorSetLayout(r->device, &state->grapgicsPipeline.descriptorSetLayout);
 
     PipelineConfig config = {
         .get_vertex_binding_desc = ui_getVertexInputBindingDescription,
@@ -80,40 +81,45 @@ void ui_renderer_init(void* _state, Scene* scene){
         .subpass_index = 1
     };
     create_graphics_pipeline(
-        state->r->device,
+        r->device,
         "shaders/default/ui.vert.spv", "shaders/default/ui.frag.spv",
-        state->r->swapchainExtent,
-        state->r->msaaSamples,
-        state->r->renderPass,
+        r->swapchainExtent,
+        r->msaaSamples,
+        r->renderPass,
         state->grapgicsPipeline.descriptorSetLayout,
         &config,
         &state->grapgicsPipeline.pipelineLayout,
         &state->grapgicsPipeline.ref
     );
-    createUniformBuffers(state->r->gpu, state->r->device, sizeof(UI_Global_UBO), state->grapgicsPipeline.uniform.global.buffers, state->grapgicsPipeline.uniform.global.buffersMemory, state->grapgicsPipeline.uniform.global.buffersMapped);
-    createDynamicOffsetUniformBuffers(state->r->gpu, state->r->device, sizeof(UI_Element_UBO), state->grapgicsPipeline.uniform.element.buffers, state->grapgicsPipeline.uniform.element.buffersMemory, state->grapgicsPipeline.uniform.element.buffersMapped, &state->grapgicsPipeline.uniform.element.alignedUboSize);
+    createUniformBuffers(r->gpu, r->device, sizeof(UI_Global_UBO), state->grapgicsPipeline.uniform.global.buffers, state->grapgicsPipeline.uniform.global.buffersMemory, state->grapgicsPipeline.uniform.global.buffersMapped);
+    createDynamicOffsetUniformBuffers(r->gpu, r->device, sizeof(UI_Element_UBO), state->grapgicsPipeline.uniform.element.buffers, state->grapgicsPipeline.uniform.element.buffersMemory, state->grapgicsPipeline.uniform.element.buffersMapped, &state->grapgicsPipeline.uniform.element.alignedUboSize);
 
-    createTextureImage(state->r->gpu, state->r->device, state->r->commandPool, state->r->queue.graphics, &state->r->mipLevels, &state->grapgicsPipeline.textureImage, &state->grapgicsPipeline.textureImageMemory);
-    createTextureImageView(state->r->device, state->grapgicsPipeline.textureImage, state->r->mipLevels, &state->grapgicsPipeline.textureImageView);
-    createTextureImageSampler(state->r->gpu, state->r->device, state->r->mipLevels, &state->grapgicsPipeline.textureSampler);
+    createTextureImage(r->gpu, r->device, r->commandPool, r->queue.graphics, &r->mipLevels, &state->grapgicsPipeline.textureImage, &state->grapgicsPipeline.textureImageMemory);
+    createTextureImageView(r->device, state->grapgicsPipeline.textureImage, r->mipLevels, &state->grapgicsPipeline.textureImageView);
+    createTextureImageSampler(r->gpu, r->device, r->mipLevels, &state->grapgicsPipeline.textureSampler);
 
-    ui_createDescriptorPool(state->r->device, &state->grapgicsPipeline.descriptorPool);
-    ui_createDescriptorSets(state->r->device, state->grapgicsPipeline.descriptorSetLayout, state->grapgicsPipeline.descriptorPool, state->grapgicsPipeline.uniform.global.buffers, state->grapgicsPipeline.uniform.element.buffers, state->grapgicsPipeline.uniform.element.alignedUboSize, state->grapgicsPipeline.textureImageView, state->grapgicsPipeline.textureSampler,state->grapgicsPipeline.descriptorSets);
+    ui_createDescriptorPool(r->device, &state->grapgicsPipeline.descriptorPool);
+    ui_createDescriptorSets(r->device, state->grapgicsPipeline.descriptorSetLayout, state->grapgicsPipeline.descriptorPool, state->grapgicsPipeline.uniform.global.buffers, state->grapgicsPipeline.uniform.element.buffers, state->grapgicsPipeline.uniform.element.alignedUboSize, state->grapgicsPipeline.textureImageView, state->grapgicsPipeline.textureSampler,state->grapgicsPipeline.descriptorSets);
 }
 static u32 elementCounter;
-void ui_renderer_update(void* _state, Scene* scene, f32 deltatime){
+void update(void* _state, void* gState){
     UI_renderer_InternalState* state = _state;
- 
-    ui_updateGlobalUniformBuffer(state->r->currentFrame, state->grapgicsPipeline.uniform.global.buffersMapped, deltatime, state->camera);
+    Renderer* r = &((GameState*)gState)->renderer;
+    f32 dt = ((GameState*)gState)->clock.deltaTime;
+
+    ui_updateGlobalUniformBuffer(r->currentFrame, state->grapgicsPipeline.uniform.global.buffersMapped, dt, state->camera);
     
-    vkCmdNextSubpass(state->r->commandBuffers[state->r->currentFrame], VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(state->r->commandBuffers[state->r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->grapgicsPipeline.ref);
-    vkCmdBindDescriptorSets(state->r->commandBuffers[state->r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->grapgicsPipeline.pipelineLayout, 0, 1, &state->grapgicsPipeline.descriptorSets[state->r->currentFrame], 1, (u32[]){0});
+    vkCmdNextSubpass(r->commandBuffers[r->currentFrame], VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBindPipeline(r->commandBuffers[r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->grapgicsPipeline.ref);
+    vkCmdBindDescriptorSets(r->commandBuffers[r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->grapgicsPipeline.pipelineLayout, 0, 1, &state->grapgicsPipeline.descriptorSets[r->currentFrame], 1, (u32[]){0});
     elementCounter=0;
 }
 
-void ui_renderer_update_mesh(void* _state, Scene* scene, EntityID e, f32 deltatime){
+void update_entity(void* _state, void* gState, EntityID e){
     UI_renderer_InternalState* state = _state;
+    Renderer* r = &((GameState*)gState)->renderer;
+    Scene* scene = &((GameState*)gState)->scene;
+    f32 dt = ((GameState*)gState)->clock.deltaTime;
 
     UI_Element* elem = GET_COMPONENT(scene, e, UI_Element);
     Transform2D* t = GET_COMPONENT(scene, e, Transform2D);
@@ -126,7 +132,7 @@ void ui_renderer_update_mesh(void* _state, Scene* scene, EntityID e, f32 deltati
     VkBuffer vertexBuffers[] = { elem->renderer.vertexBuffer};
     VkDeviceSize offsets[] = {0};
     vkCmdPushConstants(
-        state->r->commandBuffers[state->r->currentFrame],
+        r->commandBuffers[r->currentFrame],
         state->grapgicsPipeline.pipelineLayout,
         VK_SHADER_STAGE_VERTEX_BIT,
         0,
@@ -135,26 +141,29 @@ void ui_renderer_update_mesh(void* _state, Scene* scene, EntityID e, f32 deltati
     );
     
     u32 dynamicOffset = elementCounter * state->grapgicsPipeline.uniform.element.alignedUboSize;
-    vkCmdBindDescriptorSets(state->r->commandBuffers[state->r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->grapgicsPipeline.pipelineLayout, 0, 1, &state->grapgicsPipeline.descriptorSets[state->r->currentFrame], 1, &dynamicOffset);
+    vkCmdBindDescriptorSets(r->commandBuffers[r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->grapgicsPipeline.pipelineLayout, 0, 1, &state->grapgicsPipeline.descriptorSets[r->currentFrame], 1, &dynamicOffset);
     
-    ui_updateElementUniformBuffer(state->grapgicsPipeline.uniform.element.buffersMapped[state->r->currentFrame], deltatime, elem ,elementCounter++, state->grapgicsPipeline.uniform.element.alignedUboSize);
+    ui_updateElementUniformBuffer(state->grapgicsPipeline.uniform.element.buffersMapped[r->currentFrame], dt, elem ,elementCounter++, state->grapgicsPipeline.uniform.element.alignedUboSize);
     
-    vkCmdBindVertexBuffers(state->r->commandBuffers[state->r->currentFrame], 0, 1, vertexBuffers, offsets);
-    vkCmdBindIndexBuffer(state->r->commandBuffers[state->r->currentFrame], elem->renderer.indexBuffer,0, VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(state->r->commandBuffers[state->r->currentFrame], elem->renderer.indicesCount, 1, 0, 0, 0);
+    vkCmdBindVertexBuffers(r->commandBuffers[r->currentFrame], 0, 1, vertexBuffers, offsets);
+    vkCmdBindIndexBuffer(r->commandBuffers[r->currentFrame], elem->renderer.indexBuffer,0, VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(r->commandBuffers[r->currentFrame], elem->renderer.indicesCount, 1, 0, 0, 0);
     
 }
 
-void ui_renderer_shutdown(void* _state, Scene* scene){
+void destroy(void* _state, void* gState){
     UI_renderer_InternalState* state = _state;
-    destroyUniformBuffers(state->r->device, state->grapgicsPipeline.uniform.global.buffers, state->grapgicsPipeline.uniform.global.buffersMemory);
-    destroyUniformBuffers(state->r->device, state->grapgicsPipeline.uniform.element.buffers, state->grapgicsPipeline.uniform.element.buffersMemory);
-    destroyTextureSampler(state->r->device, state->grapgicsPipeline.textureSampler);
-    destroyTextureImageView(state->r->device, state->grapgicsPipeline.textureImageView);
-    destroyTextureImage(state->r->device, state->grapgicsPipeline.textureImage, state->grapgicsPipeline.textureImageMemory);
-    destroyPipeline(state->r->device, &state->grapgicsPipeline.ref, state->grapgicsPipeline.pipelineLayout);
-    destroyDescriptorPool(state->r->device, state->grapgicsPipeline.descriptorPool);
-    destroyDescriptorSetLayout(state->r->device, state->grapgicsPipeline.descriptorSetLayout);
+    Renderer* r = &((GameState*)gState)->renderer;
+
+    vkDeviceWaitIdle(r->device);
+    destroyUniformBuffers(r->device, state->grapgicsPipeline.uniform.global.buffers, state->grapgicsPipeline.uniform.global.buffersMemory);
+    destroyUniformBuffers(r->device, state->grapgicsPipeline.uniform.element.buffers, state->grapgicsPipeline.uniform.element.buffersMemory);
+    destroyTextureSampler(r->device, state->grapgicsPipeline.textureSampler);
+    destroyTextureImageView(r->device, state->grapgicsPipeline.textureImageView);
+    destroyTextureImage(r->device, state->grapgicsPipeline.textureImage, state->grapgicsPipeline.textureImageMemory);
+    destroyPipeline(r->device, &state->grapgicsPipeline.ref, state->grapgicsPipeline.pipelineLayout);
+    destroyDescriptorPool(r->device, state->grapgicsPipeline.descriptorPool);
+    destroyDescriptorSetLayout(r->device, state->grapgicsPipeline.descriptorSetLayout);
 }
 
 ///////////////////////////////
