@@ -13,7 +13,8 @@ API void ecs_systems_initialize(GameState* gState);
 API void ecs_systems_update(GameState* gState);
 API void ecs_systems_shutdown(GameState* gState);
 
-
+/// @brief runs at the start of entity's life
+API void ecs_systems_start_entity(GameState* gState, EntityID entity);
 API void ecs_systems_start_group(GameState* gState, SystemGroup group);
 API void ecs_systems_update_group(GameState* gState, SystemGroup group);
 API void ecs_systems_destroy_group(GameState* gState, SystemGroup group);

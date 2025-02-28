@@ -17,7 +17,7 @@ void subscribe_to_event(EventType t, EventListener* listener){
     }
     
     listener->_id = DynamicArray_Length(event_listeners[t]);
-    DynamicArray_Push(event_listeners[t], *listener);
+    event_listeners[t] = __DynamicArray_push(event_listeners[t], listener);
     // LOG_TRACE("Subscribed to event %d", t);
 }
 void emit_event(EventType type, EventContext context, void* sender){
@@ -27,7 +27,7 @@ void emit_event(EventType type, EventContext context, void* sender){
     u16 listnersCount = DynamicArray_Length(event_listeners[type]);
     for(u32 i=0; i<listnersCount; i++){
         EventListener listener = event_listeners[type][i];
-        listener.callback(type, sender, listener.listener, context);
+        listener.callback(type, sender, listener.listener, listener.data, context);
     }
     // LOG_TRACE("Emitted event %d [listners : %d]", type, listnersCount);
 }

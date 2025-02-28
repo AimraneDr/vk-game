@@ -11,6 +11,7 @@
 #include <collections/DynamicArray.h>
 #include <math/vec3.h>
 
+#include "components/Hierarchy.h"
 #include "components/transform.h"
 #include "components/meshRenderer.h"
 #include "components/characterController.h"
@@ -36,7 +37,6 @@ EVENT_CALLBACK(onWiinResize){
 
     camera->viewRect.x = p->display.width;
     camera->viewRect.y = p->display.height;
-    LOG_WARN("CHeck out new sizes : %.2f x %.2f", eContext.u32[0],eContext.u32[1]);
 }
 
 void game_shutdown(GameState* state);
@@ -79,16 +79,17 @@ void game_init(GameConfig config, GameState* out){
     out->camera.fieldOfView = config.camera.fieldOfView;
     out->camera.orthographicSize = config.camera.orthographicSize;
     out->camera.useOrthographic = config.camera.useOrthographic;
-    out->camera.viewRect = (Vec2i){info.display.w,info.display.h};
-
+    
     init_event_sys();
-
+    
     window_init(info, &out->platform);
+    
     input_system_init(&out->inputer);
     asset_manager_init(&out->assetManager);
     
+    out->camera.viewRect = (Vec2i){out->platform.display.width,out->platform.display.height};
     //ecs
-    ecs_init(&out->scene);
+    ecs_init(out);
     RegisterDefaultComponents(&out->scene);
     RegisterDefaultSystems(&out->scene, &out->renderer, &out->camera);
 
@@ -144,6 +145,7 @@ void game_run(GameInterface Interface){
         }
         input_system_update(&state.inputer, state.clock.deltaTime);
         window_PullEvents(&state.platform);
+        ecs_update(&state.scene);
     }
 
     ecs_systems_shutdown(&state);
@@ -220,6 +222,7 @@ void GameInitConfigSetDefaults(GameConfig* config) {
 }
 
 void RegisterDefaultComponents(Scene* scene){
+    REGIATER_COMPONENT(scene, Hierarchy);
     REGIATER_COMPONENT(scene, Transform);
     REGIATER_COMPONENT(scene, Transform2D);
     REGIATER_COMPONENT(scene, MeshRenderer);
@@ -229,7 +232,7 @@ void RegisterDefaultComponents(Scene* scene){
 
 void RegisterDefaultSystems(Scene* scene, Renderer* r, Camera* camera){
     System pbr_renderer = PBR_renderer_get_system_ref(scene,r, camera);
-    System ui_renderer = UI_renderer_get_system_ref(scene,r, camera);
+    System ui_renderer = UI_renderer_get_system_ref(scene,r);
     ecs_register_system_to_group(scene, &pbr_renderer, SYSTEM_GROUP_RENDERING);
     ecs_register_system_to_group(scene, &ui_renderer, SYSTEM_GROUP_RENDERING);
 }

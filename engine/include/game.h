@@ -8,7 +8,6 @@
 #include "core/input.h"
 #include "core/clock.h"
 #include "components/meshRenderer.h"
-#include "components/UI/ui_types.h"
 #include "components/camera.h"
 #include "assets/asset_types.h"
 #include <string/str_types.h>
@@ -31,20 +30,23 @@ typedef struct GameConfig{
     bool suspendOnMinimize;
 }GameConfig;
 
-typedef struct GameState{
-    String name;
+typedef struct GameState_t{
+    //systems
+    
     PlatformState platform;
     InputManager inputer;
     AssetManager assetManager;
-    UI_Manager uiManager;
     Renderer renderer;
-
     Clock clock;
-
+    
     //components
+    
     Camera camera;
-
     Scene scene;
+    
+    //state
+    
+    String name;
     bool suspended;
 }GameState;
 

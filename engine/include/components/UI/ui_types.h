@@ -5,13 +5,19 @@
 #include "renderer/render_types.h"
 #include "components/transform.h"
 #include <math/mathTypes.h>
+#include "ecs/ecs_types.h"
+#include "game.h"
 
 typedef struct UI_Style_t {
+    //shape
+    f32 width,height;
+
     // Background
     struct {
         Vec4 color;         // RGBA color
         VkDescriptorSet texture; // Optional texture descriptor
         float cornerRadius; // Rounded corners
+        Vec4 hoverColor;
     } background;
 
     // Border
@@ -19,6 +25,7 @@ typedef struct UI_Style_t {
         Vec4 color;         // RGBA border color
         float thickness;    // Border width in pixels
         float cornerRadius; // Match background if <0
+        Vec4 hoverColor;
     } border;
 
     // Layout
@@ -34,10 +41,11 @@ typedef struct UI_Style_t {
     } text;
 
     // Interaction states
-    Vec4 hoverColor;    // Color when hovered
     Vec4 activeColor;   // Color when clicked
 } UI_Style;
 
+#define ACTION_CALLBACK_PTR(name) void (*name)(GameState* state, EntityID e, struct UI_Element_t* elem)
+#define ACTION_CALLBACK(name) void name(GameState* state, EntityID e, struct UI_Element_t* elem)
 
 typedef struct UI_Element_t{
     struct UI_Element_t* parent;
@@ -59,7 +67,19 @@ typedef struct UI_Element_t{
         bool needsUpdate;  
     }renderer;
 
-}UI_Element;
+    //event callbacks
+    ACTION_CALLBACK_PTR(onMouseEnter);
+    ACTION_CALLBACK_PTR(onMouseLeave);
+    ACTION_CALLBACK_PTR(onMouseStay);
+    ACTION_CALLBACK_PTR(onMouseLDown);
+    ACTION_CALLBACK_PTR(onMouseRDown);
+    ACTION_CALLBACK_PTR(onMouseLUp);
+    ACTION_CALLBACK_PTR(onMouseRUp);
+    ACTION_CALLBACK_PTR(onMouseLHold);
+    ACTION_CALLBACK_PTR(onMouseRHold);
+
+    bool hovered;
+} UI_Element;
 
 typedef struct UI_Manager_t{
     UI_Element root;

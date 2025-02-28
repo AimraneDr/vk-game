@@ -51,10 +51,10 @@ void start(GameState* state){
 
 
     Asset a = load_asset(&state->assetManager, "./../resources/models/viking_room.obj");
-    Asset a1 = load_asset(&state->assetManager, "./../resources/models/cube.obj");
-    MeshRenderer mesh0,mesh1;
+    Asset a1 = load_asset(&state->assetManager, "./../resources/models/plane.obj");
+    MeshRenderer mesh0,plane;
     createMeshRenderer(a.data, &state->renderer, &mesh0);
-    createMeshRenderer(a1.data, &state->renderer, &mesh1);
+    createMeshRenderer(a1.data, &state->renderer, &plane);
     release_asset(&state->assetManager, &a);
     release_asset(&state->assetManager, &a1);
 
@@ -62,16 +62,16 @@ void start(GameState* state){
     EntityID vikingRoom0 = newEntity(&state->scene);
     EntityID cube = newEntity(&state->scene);
     Transform initT = {
-        .position = {1,0,1},
-        .rotation = {45,0,0},
+        .position = {1,0.5,-1},
+        .rotation = {-45,0,0},
         .scale = {1,1,1}
     };
     ADD_COMPONENT(&state->scene, vikingRoom0, Transform, &initT);
     ADD_COMPONENT(&state->scene, vikingRoom0, MeshRenderer, &mesh0);
-    initT.position = vec3_new(-1,0,-1);
+    initT.position = vec3_new(0,0,0);
+    initT.scale = vec3_new(3,0,3);
     ADD_COMPONENT(&state->scene, cube, Transform, &initT);
-    ADD_COMPONENT(&state->scene, cube, MeshRenderer, &mesh1);
-
+    ADD_COMPONENT(&state->scene, cube, MeshRenderer, &plane);
 }
 
 static void update(GameState* state){

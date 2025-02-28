@@ -5,7 +5,7 @@
 #include "engine_defines.h"
 
 #define CAST_EVENT_CONTEXT(context, event_type) *(event_type*)&context
-#define EVENT_CALLBACK(name) void name(EventType eType, void* sender,  void* listener, EventContext eContext)
+#define EVENT_CALLBACK(name) static void name(EventType eType, void* sender,  void* listener, void* data, EventContext eContext)
 
 
 typedef enum EventType_e{
@@ -29,6 +29,10 @@ typedef enum EventType_e{
     EVENT_TYPE_MOUSE_BUTTON_UP,
     EVENT_TYPE_MOUSE_BUTTON_DOWN,
     EVENT_TYPE_MOUSE_SCROLL,
+
+    //ECS
+    EVENT_TYPE_COMPONENT_ADDED,
+    EVENT_TYPE_COMPONENT_REMOVED,
 
 
     MAX_EVENT_TYPE
@@ -54,12 +58,13 @@ typedef struct EventContext_t{
 } EventContext;
 
 
-typedef void (*EventCallback)(EventType eType, void* sender,  void* listener, EventContext eContext);
+typedef void (*EventCallback)(EventType eType, void* sender,  void* listener, void* data, EventContext eContext);
 
 typedef struct EventListener_t{
     u16 _id;
     EventCallback callback;
     void* listener;
+    void* data;
 } EventListener;
 
 

@@ -100,7 +100,7 @@ typedef struct MouseState_t{
         u16 x,y;
     }pos;
     struct {
-        u16 dx,dy;
+        i16 dx,dy;
     }delta;
     i16 scrollDelta;
 }MouseState;

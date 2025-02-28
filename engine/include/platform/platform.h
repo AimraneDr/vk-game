@@ -3,6 +3,7 @@
 
 #include "data_types.h"
 #include "platform/platform_types.h"
+
 //Event Context Types
 typedef struct EventContextWindowResize_t{
     u32 width,height;

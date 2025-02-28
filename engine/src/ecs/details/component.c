@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include "core/debugger.h"
 #include <string/str.h>
-
+#include "core/events.h"
 
 /// @brief the returned ComponentType needs to be stored so accessing its instance is possible
 /// @param scene
@@ -49,17 +49,20 @@ void *ecs_get_component(Scene* s, EntityID e, ComponentType t)
     return (char*)p->components + (index * p->componentSize);
 };
 
-void ecs_add_component(Scene* s, EntityID e, ComponentType t, void *component)
+void* ecs_add_component(Scene* s, EntityID e, ComponentType t, void *component)
 {
     if((s->EntitiesSignatures[e] & t) == t){
         LOG_ERROR("entity already has component");
-        return;
+        return 0;
     }
     ComponentPool* p = &s->pools[__builtin_ffsll(t) - 1];
     p->sparse[e] = DynamicArray_Length(p->components);
     DynamicArray_Push(p->dense, e);
     p->components = __DynamicArray_push(p->components, component);
+    s->oldEntitiesSignatures[e] = s->EntitiesSignatures[e];
     s->EntitiesSignatures[e] |= t;
+    emit_event(EVENT_TYPE_COMPONENT_ADDED, (EventContext){.u64[0] = e, .u64[1] = t}, s);
+    return (char*)p->components + (p->sparse[e] * p->componentSize);
 }
 
 void ecs_remove_component(Scene* s, EntityID e, ComponentType t)
@@ -67,6 +70,11 @@ void ecs_remove_component(Scene* s, EntityID e, ComponentType t)
     ComponentPool* p = &s->pools[__builtin_ffsll(t) - 1];
     DynamicArray_PopAt(p->dense, p->sparse[e], 0);
     DynamicArray_PopAt(p->components, p->sparse[e], 0);
+    s->oldEntitiesSignatures[e] = s->EntitiesSignatures[e];
+    if(ecs_entity_has_component(s, e, t)){
+        s->EntitiesSignatures[e] ^= t;
+        emit_event(EVENT_TYPE_COMPONENT_ADDED, (EventContext){.u64[0] = e, .u64[1] = t}, s);
+    }
     p->sparse[e] = -1;
 }
 

@@ -9,22 +9,24 @@
 #include "renderer/details/uniformBuffer.h"
 #include "renderer/details/texture.h"
 #include "renderer/details/descriptor.h"
+#include "ecs/ecs.h"
+#include "core/events.h"
 
 //TODO: temporarry
 #include <math/mat.h>
 #include <math/vec2.h>
 #include <math/trigonometry.h>
 #include "game.h"
-#include "ecs/ecs.h"
+
 
 typedef struct UI_renderer_InternalState_t{
     const Renderer* r;
     Pipeline grapgicsPipeline;
-    Camera* camera
 }UI_renderer_InternalState;
 
 
 static void start(void* _state, void* gState);
+static void start_entity(void* _state, void* gState, EntityID e);
 static void update(void* _state, void* gState);
 static void update_entity(void* _state, void* gState, EntityID e);
 static void destroy(void* _state, void* gState);
@@ -38,14 +40,14 @@ void ui_createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, V
 void ui_updateGlobalUniformBuffer(uint32_t currentImage, void** uniformBuffersMapped, f64 deltatime, Camera* camera);
 void ui_updateElementUniformBuffer(void* uniformBufferMapped, f64 deltatime, UI_Element* uiElement, u32 alignIndex, VkDeviceSize alignedUboSize);
 
-System UI_renderer_get_system_ref(Scene* scene, Renderer* r, Camera* camera){
+System UI_renderer_get_system_ref(Scene* scene, Renderer* r){
     UI_renderer_InternalState* s = malloc(sizeof(UI_renderer_InternalState));
     memcpy(s,&(UI_renderer_InternalState){0}, sizeof(UI_renderer_InternalState));
     s->r = r;
-    s->camera = camera;
     return (System){
         .Signature = COMPONENT_TYPE(scene, Transform2D) | COMPONENT_TYPE(scene, UI_Element),
         .start = start,
+        .startEntity = start_entity,
         .update = update,
         .updateEntity = update_entity,
         .destroy = destroy,
@@ -101,13 +103,76 @@ void start(void* _state, void* gState){
     ui_createDescriptorPool(r->device, &state->grapgicsPipeline.descriptorPool);
     ui_createDescriptorSets(r->device, state->grapgicsPipeline.descriptorSetLayout, state->grapgicsPipeline.descriptorPool, state->grapgicsPipeline.uniform.global.buffers, state->grapgicsPipeline.uniform.element.buffers, state->grapgicsPipeline.uniform.element.alignedUboSize, state->grapgicsPipeline.textureImageView, state->grapgicsPipeline.textureSampler,state->grapgicsPipeline.descriptorSets);
 }
+
+typedef struct ui_event_context{
+    Transform2D* transform;
+    UI_Element* elem;
+};
+
+EVENT_CALLBACK(onMouseMove){
+    GameState* gState = listener;
+    Scene* scene = &gState->scene;
+    Camera* cam = &gState->camera;
+    EntityID* e = data;
+
+    Transform2D* transform = GET_COMPONENT(scene, *e, Transform2D);
+    UI_Element* elem = GET_COMPONENT(scene, *e, UI_Element);
+    Vec2 mouse_pos = vec2_new(((u32)eContext.u16[0])/cam->pixelsPerPoint,((u32)eContext.u16[1])/cam->pixelsPerPoint);
+
+    Mat4 inv_mat = mat4_inverse(transform->mat);
+    if (mat4_compare(inv_mat, MAT4_ZERO)) return;
+    
+    Vec4 mouse_world = {mouse_pos.x, mouse_pos.y, 0.0f, 1.0f};
+    Vec4 mouse_local = mat4_mulVec4(inv_mat, mouse_world);
+    
+    Vec2 halfSize = vec2_new(elem->style.width/2.f,elem->style.height/2.f);
+
+
+    if(mouse_local.x >= -halfSize.x && 
+        mouse_local.x <= halfSize.x && 
+        mouse_local.y >= -halfSize.y && 
+        mouse_local.y <= halfSize.y)
+    {
+        if(!elem->hovered){
+            elem->hovered = true;
+            if(elem->onMouseEnter)elem->onMouseEnter(gState, *e, elem);
+            return;
+        }else{
+            if(elem->onMouseStay)elem->onMouseStay(gState, *e, elem);
+            return;
+        }
+    }
+    
+    if(elem->hovered){
+        elem->hovered = false;
+        if(elem->onMouseLeave)elem->onMouseLeave(gState, *e, elem);
+        return;
+    }
+}
+
+void start_entity(void* _state, void* gState, EntityID e){
+    //this is called on the start of the program , when it should be called on the creating of an entity
+    EventListener wrapper = {
+        .callback=onMouseMove, 
+        .listener=gState,
+        //TODO: free it on unsubscribe
+        .data=malloc(sizeof(EntityID)),
+    };
+    memcpy(wrapper.data, &e, sizeof(e));
+    subscribe_to_event(
+        EVENT_TYPE_MOUSE_MOVED, 
+        &wrapper
+    );
+    LOG_WARN("entity subscribed to hover event");
+}
+
 static u32 elementCounter;
 void update(void* _state, void* gState){
     UI_renderer_InternalState* state = _state;
     Renderer* r = &((GameState*)gState)->renderer;
     f32 dt = ((GameState*)gState)->clock.deltaTime;
 
-    ui_updateGlobalUniformBuffer(r->currentFrame, state->grapgicsPipeline.uniform.global.buffersMapped, dt, state->camera);
+    ui_updateGlobalUniformBuffer(r->currentFrame, state->grapgicsPipeline.uniform.global.buffersMapped, dt, &((GameState*)gState)->camera);
     
     vkCmdNextSubpass(r->commandBuffers[r->currentFrame], VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(r->commandBuffers[r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->grapgicsPipeline.ref);
@@ -117,6 +182,7 @@ void update(void* _state, void* gState){
 
 void update_entity(void* _state, void* gState, EntityID e){
     UI_renderer_InternalState* state = _state;
+    InputManager* inputs = &((GameState*)gState)->inputer;
     Renderer* r = &((GameState*)gState)->renderer;
     Scene* scene = &((GameState*)gState)->scene;
     f32 dt = ((GameState*)gState)->clock.deltaTime;
@@ -124,10 +190,23 @@ void update_entity(void* _state, void* gState, EntityID e){
     UI_Element* elem = GET_COMPONENT(scene, e, UI_Element);
     Transform2D* t = GET_COMPONENT(scene, e, Transform2D);
 
+    //emit events
+    //click
+    //TODO: add elem checking, even if it is hovered that does not mean it is what is selected, a child elem can be selected instead
+    if(elem->hovered){
+        if(is_key_down(inputs, MOUSE_BUTTON_LEFT) && elem->onMouseLDown)elem->onMouseLDown(gState, e, elem);
+        if(is_key_up(inputs, MOUSE_BUTTON_LEFT) && elem->onMouseLUp)elem->onMouseLUp(gState, e, elem);
+        if(is_key_pressed(inputs, MOUSE_BUTTON_LEFT) && elem->onMouseLHold)elem->onMouseLHold(gState, e, elem);
+
+        if(is_key_down(inputs, MOUSE_BUTTON_RIGHT) && elem->onMouseRDown)elem->onMouseRDown(gState, e, elem);
+        if(is_key_up(inputs, MOUSE_BUTTON_RIGHT) && elem->onMouseRUp)elem->onMouseRUp(gState, e, elem);
+        if(is_key_pressed(inputs, MOUSE_BUTTON_RIGHT) && elem->onMouseRHold)elem->onMouseRHold(gState, e, elem);
+    }
+
     transform2D_update(t);
 
     UI_PushConstant pc = {
-        .model = mat3_to_mat4(t->mat)
+        .model = t->mat
     };
     VkBuffer vertexBuffers[] = { elem->renderer.vertexBuffer};
     VkDeviceSize offsets[] = {0};
@@ -330,7 +409,7 @@ void ui_updateGlobalUniformBuffer(uint32_t currentImage, void** uniformBuffersMa
 void ui_updateElementUniformBuffer(void* uniformBufferMapped, f64 deltatime, UI_Element* uiElement, u32 alignIndex, VkDeviceSize alignedUboSize) {
     UI_Element_UBO ubo;
     
-    ubo.color = uiElement->style.background.color;
+    ubo.color = !uiElement->hovered ? uiElement->style.background.color : uiElement->style.background.hoverColor;
 
     VkDeviceSize offset = alignIndex * alignedUboSize;
     memcpy((void*)uniformBufferMapped+offset, &ubo, sizeof(ubo));

@@ -12,7 +12,7 @@
 API void ecs_register_component(Scene *scene, const char* name, u16 size);
 API ComponentType ecs_get_component_type(Scene* scene, const char* name);
 API void *ecs_get_component(Scene* s, EntityID e, ComponentType t);
-API void ecs_add_component(Scene* s, EntityID e, ComponentType t, void *component);
+API void *ecs_add_component(Scene* s, EntityID e, ComponentType t, void *component);
 API void ecs_remove_component(Scene* s, EntityID e, ComponentType t);
 API void ecs_remove_all_components(Scene* s, EntityID e);
 

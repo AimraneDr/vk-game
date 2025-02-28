@@ -10,12 +10,14 @@ typedef struct Transform_Component_t{
     Vec3 rotation;
     Vec3 scale;
     Mat4 mat;
+    Mat4 __local_mat;
 }Transform;
 
 typedef struct Transform2D_Component_t{
     Vec2 position;
     Vec2 scale;
-    Mat3 mat;
+    Mat4 mat;
+    Mat4 __local_mat;
     f32 rotation;
 }Transform2D;
 

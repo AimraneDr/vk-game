@@ -42,7 +42,7 @@ void renderer_destroyDebugMessanger(VkInstance instance, VkDebugUtilsMessengerEX
 
 void recreateSwapChainObject(Renderer *r, u32 width, u32 height, WindowState visibility);
 
-static void onWindowResize(EventType eType, void *sender, void *listener, EventContext context)
+EVENT_CALLBACK(onWindowResize)
 {
     ((Renderer *)listener)->framebufferResized = true;
 }

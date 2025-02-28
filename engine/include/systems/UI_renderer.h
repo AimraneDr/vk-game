@@ -5,6 +5,6 @@
 #include "ecs/ecs_types.h"
 #include "components/camera.h"
 
-System UI_renderer_get_system_ref(Scene* scene, Renderer* r, Camera* camera);
+System UI_renderer_get_system_ref(Scene* scene, Renderer* r);
 
 #endif //SYSTEM_UI_RENDERER_H

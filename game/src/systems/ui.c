@@ -10,10 +10,13 @@
 #include<math/mathUtils.h>
 #include <core/input.h>
 #include <game.h>
+#include <core/events.h>
+#include <math/vec2.h>
 
 typedef struct InternalState_t{
     
 }InternalState;
+
 
 static void start(void* _state,  void* gState);
 static void update_entity(void* _state, void* gState, EntityID entity);
@@ -29,9 +32,18 @@ System game_ui_system_ref(Scene* scene, Renderer* r){
     };
 }
 
+static ACTION_CALLBACK(_onMouseLHold){
+    Transform2D* t = GET_COMPONENT(&state->scene, e, Transform2D);
+    Vec2 delta = vec2_new(state->inputer.mouse.delta.dx/state->camera.pixelsPerPoint, state->inputer.mouse.delta.dy/state->camera.pixelsPerPoint);
+    if(delta.x != 0 || delta.y != 0){
+        t->position = vec2_add(t->position, delta);
+    }
+}
+
 void start(void* _state,  void* gState){
     Renderer* r = &((GameState*)gState)->renderer;
     Scene* scene = &((GameState*)gState)->scene;
+    Camera* camera = &((GameState*)gState)->camera;
     CharacterController controller = {
         .MoveSpped = 5.f,
         .RotateSpeed = 45.f
@@ -39,34 +51,45 @@ void start(void* _state,  void* gState){
     Transform2D containerTransform = {
         .position = {0.f, 4.f},
         .scale = {1.f, 1.f},
-        .rotation = 90.f,
+        .rotation = 0.f,
     };
     UI_Style containerStyle = {
-        .background.color = vec4_new(1,0,0,1)
+        .background.color = vec4_new(0,.7,.4,1),
+        .background.hoverColor = vec4_new(.5,.7,.4,1),
+        .width =1.f,
+        .height =1.f,
     };
     UI_Style containerStyle0 = {
-        .background.color = vec4_new(0,1,0,1)
+        .background.color = vec4_new(0,.4,.7,1),
+        .background.hoverColor = vec4_new(.5,.4,.7,1),
+        .width =1.f,
+        .height =1.f,
     };
     UI_Element c1 = ui_create_container(containerStyle, r);
     UI_Element c2 = ui_create_container(containerStyle0, r);
+    
+    c1.onMouseLHold = _onMouseLHold;
     EntityID container = newEntity(scene);
     ADD_COMPONENT(scene, container, UI_Element, &c1);
     ADD_COMPONENT(scene, container, Transform2D, &containerTransform);
-    ADD_COMPONENT(scene, container, CharacterController, &controller);
     EntityID container0 = newEntity(scene);
     containerTransform.position = (Vec2){0,0};
     containerTransform.scale = (Vec2){1,1};
     ADD_COMPONENT(scene, container0, UI_Element, &c2);
     ADD_COMPONENT(scene, container0, Transform2D, &containerTransform);
+    
+    ADD_COMPONENT(scene, container0, CharacterController, &controller);
 }
 
 static void update_entity(void* _state,  void* gState, EntityID entity){
     InputManager* inputs = &((GameState*)gState)->inputer;
+    Camera* camera = &((GameState*)gState)->camera;
     f64 dt = ((GameState*)gState)->clock.deltaTime;
     UI_Element* E = GET_COMPONENT(&((GameState*)gState)->scene, entity, UI_Element);
     Transform2D* T = GET_COMPONENT(&((GameState*)gState)->scene, entity, Transform2D);
     CharacterController* C = GET_COMPONENT(&((GameState*)gState)->scene, entity, CharacterController);
     if(C){
+        
         if(is_key_pressed(inputs, KEY_A)){
             T->position.x -= C->MoveSpped * dt;
         }

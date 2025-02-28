@@ -12,6 +12,7 @@
 
 //TODO: temporarry
 #include <math/mat.h>
+#include <math/vec3.h>
 #include <math/trigonometry.h>
 
 #include "ecs/ecs.h"
@@ -122,9 +123,9 @@ void update_entity(void* _state, void* gState, EntityID e){
     MeshRenderer* m = GET_COMPONENT(scene, e, MeshRenderer);
     Transform* t = GET_COMPONENT(scene, e, Transform);
     t->mat = mat4_mul(
-        mat4_scaling(t->scale),
+        mat4_scaling(vec3_mul(t->scale, vec3_new(1,-1,1))),
         mat4_mul(
-            mat4_rotation(deg_to_rad(t->rotation.x), (Vec3){.0f, 1.0f, .0f}),
+            mat4_rotation(deg_to_rad(t->rotation.x), VEC3_UP),
             mat4_translation(t->position)
         )
     );

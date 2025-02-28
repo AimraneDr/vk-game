@@ -12,11 +12,21 @@ typedef u16 EntityID;
 typedef u64 Mask;
 typedef Mask ComponentType;
 
+typedef enum SystemProperty_e{
+    SYSTEM_PROPERTY_HIERARCHY_UPDATE = 1<<0,
+    SYSTEM_PROPERTY_HIERARCHY_START = 1<<1,
+}SystemProperty;
+
 typedef enum SystemGroup_e{
     SYSTEM_GROUP_RENDERING,
     SYSTEM_GROUP_GAME,
     MAX_SYSTEM_GROUPS
 }SystemGroup;
+
+typedef struct SparseSet_t{
+    u16 sparse[MAX_ENTITIES];
+    EntityID* dense;
+}SparseSet;
 
 typedef struct ComponentPool{
     u16* sparse;
@@ -30,6 +40,7 @@ typedef struct Scene_t Scene;
 
 typedef struct System_t{
     const Mask Signature;
+    SystemProperty properties;
     void* state;
     
     //functions
@@ -47,11 +58,13 @@ typedef struct System_t{
 
 //TODO: rename to : World, ecs_manager, 
 typedef struct Scene_t{
+    SparseSet rootEntities; //sparse set
     EntityID* freeEntities; //dynamic list
     u32 freeEntitiesCount;     
     System* systemGroups[MAX_SYSTEM_GROUPS];        //array of dynamic lists
     ComponentPool pools[MAX_COMPONENT_TYPES];
     Mask EntitiesSignatures[MAX_ENTITIES];
+    Mask oldEntitiesSignatures[MAX_ENTITIES];
 
     String componentNames[MAX_COMPONENT_TYPES]; // Track component names
     u8 componentTypesCount;

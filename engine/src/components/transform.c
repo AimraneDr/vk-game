@@ -2,13 +2,13 @@
 
 #include <math/mat.h>
 #include <math/trigonometry.h>
-#include <math/vec2.h>
+#include <math/vec3.h>
 
 void transform2D_update(Transform2D* t) {
-    Mat3 translation = mat3_translation(t->position);
-    Mat3 rotation = mat3_rotation(deg_to_rad(t->rotation), VEC2_ZERO);
-    Mat3 scaling = mat3_scaling(t->scale);
+    Mat4 translation = mat4_translation(vec3_fromVec2(t->position, 0.f));
+    Mat4 rotation = mat4_rotation(deg_to_rad(t->rotation), VEC3_FORWARD);
+    Mat4 scaling = mat4_scaling(vec3_fromVec2(t->scale, 1.f));
 
     // t->mat = mat3_mul(translation, mat3_mul(rotation, scaling));
-    t->mat = mat3_mul(scaling, mat3_mul(rotation, translation));
+    t->mat = mat4_mul(scaling, mat4_mul(rotation, translation));
 }

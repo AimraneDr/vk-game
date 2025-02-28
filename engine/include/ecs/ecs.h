@@ -6,6 +6,11 @@
 #include "./details/entity.h"
 #include "./details/system.h"
 
-void ecs_init(Scene* out);
+void ecs_init(GameState* gState);
+void ecs_update(Scene* s);
 void ecs_shutdown(Scene* s);
+
+API void ecs_add_child(Scene* s, EntityID parent, EntityID child);
+API void ecs_remove_child(Scene* s, EntityID parent, EntityID child);
+
 #endif //ECS_H

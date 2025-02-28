@@ -8,10 +8,10 @@
 
 // event's callbacks declaration
 
-void onKeyButtonDown(EventType eType, void *sender, void *listener, EventContext eContext);
-void onKeyButtonUp(EventType eType, void *sender, void *listener, EventContext eContext);
-void onMouseMove(EventType eType, void *sender, void *listener, EventContext eContext);
-void onMouseScroll(EventType eType, void *sender, void *listener, EventContext eContext);
+EVENT_CALLBACK(onKeyButtonDown);
+EVENT_CALLBACK(onKeyButtonUp);
+EVENT_CALLBACK(onMouseMove);
+EVENT_CALLBACK(onMouseScroll);
 
 static EventListener
     onKeyDownListener,
@@ -99,7 +99,7 @@ f32 get_key_press_duration(InputManager* manager, Key key) {
 
 // event's callbacks definition
 
-void onKeyButtonDown(EventType eType, void *sender, void *listener, EventContext eContext)
+EVENT_CALLBACK(onKeyButtonDown)
 {
     if(eContext.u8[0] == KEY_NULL) return;
 
@@ -110,7 +110,7 @@ void onKeyButtonDown(EventType eType, void *sender, void *listener, EventContext
     }
 };
 
-void onKeyButtonUp(EventType eType, void *sender, void *listener, EventContext eContext)
+EVENT_CALLBACK(onKeyButtonUp)
 {
     if(eContext.u8[0] == KEY_NULL) return;
     InputManager *manager = (InputManager *)listener;
@@ -118,7 +118,7 @@ void onKeyButtonUp(EventType eType, void *sender, void *listener, EventContext e
     manager->inputs[k] = KEY_STATE_RELEASED;
 };
 
-void onMouseMove(EventType eType, void *sender, void *listener, EventContext eContext)
+EVENT_CALLBACK(onMouseMove)
 {
     InputManager *manager = (InputManager *)listener;
     u16 newX = eContext.u16[0];
@@ -129,7 +129,7 @@ void onMouseMove(EventType eType, void *sender, void *listener, EventContext eCo
     manager->mouse.pos.x = newX;
     manager->mouse.pos.y = newY;
 };
-void onMouseScroll(EventType eType, void *sender, void *listener, EventContext eContext)
+EVENT_CALLBACK(onMouseScroll)
 {
     InputManager *manager = (InputManager *)listener;
     manager->mouse.scrollDelta += eContext.i16[0];

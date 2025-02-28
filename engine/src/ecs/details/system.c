@@ -2,6 +2,7 @@
 
 #include <collections/DynamicArray.h>
 #include "core/debugger.h"
+#include "components/Hierarchy.h"
 
 //TODO: check if group out of bound before operation
 
@@ -61,6 +62,24 @@ void ecs_systems_shutdown(GameState* gState){
     ecs_systems_destroy_group(gState, SYSTEM_GROUP_GAME);
 }
 
+void ecs_systems_start_entity(GameState* gState, EntityID entity){
+    Scene* scene = &gState->scene;
+    for(u8 i=0; i< MAX_SYSTEM_GROUPS; i++){
+        System* systems = scene->systemGroups[i];
+        for (u16 i = 0; i < DynamicArray_Length(systems); i++)
+        {
+            System *sys = &systems[i];
+            //old entity signature did not match the systems
+            if((scene->oldEntitiesSignatures[entity] & sys->Signature) != sys->Signature){
+                //if new entity's signature matches the system's
+                if((scene->EntitiesSignatures[entity] & sys->Signature) == sys->Signature){
+                    if(sys->startEntity) sys->startEntity(sys->state, gState, entity);
+                }
+            }
+        }
+    }
+}
+
 void ecs_systems_start_group(GameState* gState, SystemGroup group)
 {
     Scene* s = &gState->scene;
@@ -91,6 +110,16 @@ void ecs_systems_start_group(GameState* gState, SystemGroup group)
     }
 }
 
+void hierarchy_update(GameState* gState, System* sys, EntityID* roots){
+    u16 len = DynamicArray_Length(roots);
+    for(u16 i=0; i < len; i++){
+        if(sys->updateEntity) sys->updateEntity(sys->state, gState, roots[i]);
+        Hierarchy* h = GET_COMPONENT(&gState->scene, roots[i], Hierarchy);
+        if(!h || DynamicArray_Length(h->children) == 0) continue;
+        hierarchy_update(gState, sys, h->children);
+    }
+}
+
 void ecs_systems_update_group(GameState* gState, SystemGroup group)
 {
     Scene* scene = &gState->scene;
@@ -108,16 +137,20 @@ void ecs_systems_update_group(GameState* gState, SystemGroup group)
         }
         ComponentPool *pool = &scene->pools[poolIndex];
 
-        EntityID *targets = getTargetedEntities(scene, sys->Signature, pool);
-        // Process collected entities
-
-        for (u32 j = 0; j < DynamicArray_Length(targets); j++)
-        {
-            if(sys->updateEntity) sys->updateEntity(sys->state, gState, targets[j]);
+        if(sys->properties & SYSTEM_PROPERTY_HIERARCHY_UPDATE){
+            //hierarchy update
+            hierarchy_update(gState, sys, gState->scene.rootEntities.dense);
+        }else{
+            //linear update
+            EntityID *targets = getTargetedEntities(scene, sys->Signature, pool);    
+            for (u32 j = 0; j < DynamicArray_Length(targets); j++)
+            {
+                if(sys->updateEntity) sys->updateEntity(sys->state, gState, targets[j]);
+            }
+            DynamicArray_Destroy(targets);
+            targets = 0;
         }
 
-        DynamicArray_Destroy(targets);
-        targets = 0;
     }
 }
 

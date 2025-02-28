@@ -1,6 +1,9 @@
 #include "components/UI/uiComponents.h"
 
 #include "core/debugger.h"
+#include "core/events.h"
+
+#include <math/vec2.h>
 
 //TODO: encapsulate in a local memory management system
 #include <stdlib.h>
@@ -32,13 +35,11 @@ void ui_appendChild(UI_Element* parent, UI_Element* child){
 }
 
 UI_Element ui_createElement(UI_Style s){
-    UI_Element new = {
-        .parent = 0,
-        .children = createChildrenArray(),
-        .style = s,
-        .order = 0,
-        .renderer = {0}
-    };
+    UI_Element new = {0};
+    new.children = createChildrenArray();
+    new.style = s;
+    new.hovered = false;
+
     // pushChild(&parent->children, &new);
     return new;
 }
