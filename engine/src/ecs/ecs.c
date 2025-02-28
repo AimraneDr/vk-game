@@ -50,6 +50,12 @@ void ecs_shutdown(Scene* s){
 
 
 void ecs_add_child(Scene* s, EntityID parent, EntityID child){
+    //pop child from root if it is one
+    if(s->rootEntities.sparse[child] != INVALID_ENTITY){
+        DynamicArray_PopAt(s->rootEntities.dense, s->rootEntities.sparse[child], 0);
+        s->rootEntities.sparse[child] = INVALID_ENTITY;
+    }
+
     Hierarchy* parentH = GET_COMPONENT(s, parent, Hierarchy);
     if(!parentH){
         Hierarchy h = {
@@ -70,8 +76,16 @@ void ecs_add_child(Scene* s, EntityID parent, EntityID child){
             .children = DynamicArray_Create(EntityID),
             .outdated = false
         };
-        childH = ADD_COMPONENT(s, parent, Hierarchy, &h);
+        childH = ADD_COMPONENT(s, child, Hierarchy, &h);
     } else {
+        Hierarchy* oldParent = GET_COMPONENT(s, childH->parent, Hierarchy);
+        if(oldParent){
+            for(u16 i=0; i<DynamicArray_Length(oldParent->children); i++){
+                if(oldParent->children[i] == child){
+                    DynamicArray_PopAt(oldParent->children, i, 0);
+                }
+            }
+        }
         childH->parent = parent;
     }
 }

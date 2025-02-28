@@ -2,6 +2,7 @@
 
 #include "components/transform.h"
 #include "components/meshRenderer.h"
+#include "components/Hierarchy.h"
 #include "core/debugger.h"
 
 #include "renderer/render_types.h"
@@ -122,13 +123,12 @@ void update_entity(void* _state, void* gState, EntityID e){
 
     MeshRenderer* m = GET_COMPONENT(scene, e, MeshRenderer);
     Transform* t = GET_COMPONENT(scene, e, Transform);
-    t->mat = mat4_mul(
-        mat4_scaling(vec3_mul(t->scale, vec3_new(1,-1,1))),
-        mat4_mul(
-            mat4_rotation(deg_to_rad(t->rotation.x), VEC3_UP),
-            mat4_translation(t->position)
-        )
-    );
+    Hierarchy* h = GET_COMPONENT(scene, e, Hierarchy);
+    Transform* parentT = 0;
+    
+    if(h && h->parent != INVALID_ENTITY) parentT = GET_COMPONENT(scene, h->parent, Transform);
+    transform_update(t, parentT? &parentT->__local_mat : 0);
+
     PBR_PushConstant pc = {
             .model = t->mat
     };

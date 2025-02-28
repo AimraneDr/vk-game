@@ -1,6 +1,7 @@
 #include "systems/UI_renderer.h"
 
 #include "components/transform.h"
+#include "components/Hierarchy.h"
 #include "components/UI/uiComponents.h"
 #include "core/debugger.h"
 #include "meshTypes.h"
@@ -46,6 +47,7 @@ System UI_renderer_get_system_ref(Scene* scene, Renderer* r){
     s->r = r;
     return (System){
         .Signature = COMPONENT_TYPE(scene, Transform2D) | COMPONENT_TYPE(scene, UI_Element),
+        .properties = SYSTEM_PROPERTY_HIERARCHY_UPDATE,
         .start = start,
         .startEntity = start_entity,
         .update = update,
@@ -120,10 +122,11 @@ EVENT_CALLBACK(onMouseMove){
     Vec2 mouse_pos = vec2_new(((u32)eContext.u16[0])/cam->pixelsPerPoint,((u32)eContext.u16[1])/cam->pixelsPerPoint);
 
     Mat4 inv_mat = mat4_inverse(transform->mat);
-    if (mat4_compare(inv_mat, MAT4_ZERO)) return;
+    Mat4 inv_local_mat = mat4_inverse(transform->__local_mat);
+    if (mat4_compare(inv_mat, MAT4_ZERO) || mat4_compare(inv_local_mat, MAT4_ZERO)) return;
     
     Vec4 mouse_world = {mouse_pos.x, mouse_pos.y, 0.0f, 1.0f};
-    Vec4 mouse_local = mat4_mulVec4(inv_mat, mouse_world);
+    Vec4 mouse_local = mat4_mulVec4(mat4_mul(inv_local_mat,inv_mat), mouse_world);
     
     Vec2 halfSize = vec2_new(elem->style.width/2.f,elem->style.height/2.f);
 
@@ -163,7 +166,6 @@ void start_entity(void* _state, void* gState, EntityID e){
         EVENT_TYPE_MOUSE_MOVED, 
         &wrapper
     );
-    LOG_WARN("entity subscribed to hover event");
 }
 
 static u32 elementCounter;
@@ -203,10 +205,19 @@ void update_entity(void* _state, void* gState, EntityID e){
         if(is_key_pressed(inputs, MOUSE_BUTTON_RIGHT) && elem->onMouseRHold)elem->onMouseRHold(gState, e, elem);
     }
 
-    transform2D_update(t);
+    Hierarchy* h = GET_COMPONENT(scene, e, Hierarchy);
+    Transform2D* parentT = 0;
+    
+    if(h && h->parent != INVALID_ENTITY) parentT = GET_COMPONENT(scene, h->parent, Transform2D);
+    if(parentT){
+        Mat4 m =mat4_mul(parentT->mat, parentT->__local_mat);
+        transform2D_update(t, &m);
+    }else{
+        transform2D_update(t, 0);
+    }
 
     UI_PushConstant pc = {
-        .model = t->mat
+        .model = mat4_mul(t->mat, t->__local_mat)
     };
     VkBuffer vertexBuffers[] = { elem->renderer.vertexBuffer};
     VkDeviceSize offsets[] = {0};

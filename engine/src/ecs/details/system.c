@@ -38,12 +38,12 @@ u8 getSmallestPoolIndex(Scene* s, Mask m)
     }
     return smallestPool;
 }
-EntityID *getTargetedEntities(Scene* s, Mask systemSignature, ComponentPool *pool)
+EntityID *getTargetedEntities(Scene* s, Mask systemSignature, EntityID* entities)
 {
     EntityID *matchedEntities = DynamicArray_Create(EntityID);
-    for (u32 j = 0; j < DynamicArray_Length(pool->dense); j++)
+    for (u32 j = 0; j < DynamicArray_Length(entities); j++)
     {
-        EntityID entity = pool->dense[j];
+        EntityID entity = entities[j];
         if (entity_match_system_signature(s->EntitiesSignatures[entity], systemSignature))
         {
             DynamicArray_Push(matchedEntities, entity);
@@ -99,7 +99,7 @@ void ecs_systems_start_group(GameState* gState, SystemGroup group)
         }
         
         ComponentPool *pool = &s->pools[poolIndex];
-        EntityID *targets = getTargetedEntities(s, sys->Signature, pool);
+        EntityID *targets = getTargetedEntities(s, sys->Signature, pool->dense);
         // Process collected entities
         for (u32 j = 0; j < DynamicArray_Length(targets); j++)
         {
@@ -139,10 +139,11 @@ void ecs_systems_update_group(GameState* gState, SystemGroup group)
 
         if(sys->properties & SYSTEM_PROPERTY_HIERARCHY_UPDATE){
             //hierarchy update
-            hierarchy_update(gState, sys, gState->scene.rootEntities.dense);
+            EntityID *targets = getTargetedEntities(scene, sys->Signature, gState->scene.rootEntities.dense);    
+            hierarchy_update(gState, sys, targets);
         }else{
             //linear update
-            EntityID *targets = getTargetedEntities(scene, sys->Signature, pool);    
+            EntityID *targets = getTargetedEntities(scene, sys->Signature, pool->dense);    
             for (u32 j = 0; j < DynamicArray_Length(targets); j++)
             {
                 if(sys->updateEntity) sys->updateEntity(sys->state, gState, targets[j]);
@@ -168,7 +169,7 @@ void ecs_systems_destroy_group(GameState* gState, SystemGroup group)
             return;
         }
         ComponentPool *pool = &scene->pools[poolIndex];
-        EntityID *targets = getTargetedEntities(scene, sys->Signature, pool);
+        EntityID *targets = getTargetedEntities(scene, sys->Signature, pool->dense);
         // Process collected entities
         for (u32 j = 0; j < DynamicArray_Length(targets); j++)
         {

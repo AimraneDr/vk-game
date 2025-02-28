@@ -21,6 +21,7 @@ typedef struct Transform2D_Component_t{
     f32 rotation;
 }Transform2D;
 
-void transform2D_update(Transform2D* t);
+void transform_update(Transform* t, Mat4* parentSpace);
+void transform2D_update(Transform2D* t, Mat4* parentSpace);
 
 #endif //TRANSFORM_COMPONENT_H
