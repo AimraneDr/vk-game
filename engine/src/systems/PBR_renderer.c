@@ -13,6 +13,7 @@
 
 //TODO: temporarry
 #include <math/mat.h>
+#include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/trigonometry.h>
 
@@ -22,8 +23,6 @@
 typedef struct PBR_renderer_InternalState_t{
     const Renderer* r;
     Pipeline graphicsPipeline;
-
-    Camera* camera
 }PBR_renderer_InternalState;
 
 
@@ -45,7 +44,6 @@ System PBR_renderer_get_system_ref(Scene* scene, Renderer* r, Camera* camera){
     PBR_renderer_InternalState* s = malloc(sizeof(PBR_renderer_InternalState));
     memcpy(s,&(PBR_renderer_InternalState){0}, sizeof(PBR_renderer_InternalState));
     s->r = r;
-    s->camera = camera;
     return (System){
         .Signature = ecs_get_component_type(scene, "MeshRenderer") | ecs_get_component_type(scene, "Transform"),
         .start = start,
@@ -107,10 +105,11 @@ void start(void* _state, void* gState){
 void update(void* _state, void* gState){
     PBR_renderer_InternalState* state = _state;
     Renderer* r = &((GameState*)gState)->renderer;
+    Camera* cam = &((GameState*)gState)->camera;
     f32 dt =  ((GameState*)gState)->clock.deltaTime;
     
  
-    updateGlobalUniformBuffer(r->currentFrame, state->graphicsPipeline.uniform.global.buffersMapped, dt, state->camera);
+    updateGlobalUniformBuffer(r->currentFrame, state->graphicsPipeline.uniform.global.buffersMapped, dt, cam);
 
     vkCmdBindPipeline(r->commandBuffers[r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->graphicsPipeline.ref);
     vkCmdBindDescriptorSets(r->commandBuffers[r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->graphicsPipeline.pipelineLayout, 0, 1, state->graphicsPipeline.descriptorSets, 0, 0);
@@ -163,7 +162,6 @@ void destroy(void* _state, void* gState){
 }
 
 void destroy_entity(void* _state, void* gState, EntityID e){
-    PBR_renderer_InternalState* state = _state;
     MeshRenderer* m = GET_COMPONENT(&((GameState*)gState)->scene, e, MeshRenderer);
     destroyMeshRenderer(&((GameState*)gState)->renderer, m);
 }
@@ -172,7 +170,7 @@ void destroy_entity(void* _state, void* gState, EntityID e){
 /////      INTERNAL     ///////
 ///////////////////////////////
 ///////////////////////////////
-static const u8 bindingsCount = 2;
+#define bindingsCount 2
 
 void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out){
     VkDescriptorSetLayoutBinding uboLayoutBinding = {
@@ -285,7 +283,7 @@ void createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDe
 void updateGlobalUniformBuffer(uint32_t currentImage, void** uniformBuffersMapped, f64 deltatime, Camera* camera) {
 
     camera_updateViewMat(camera);
-    camera_updateProjectionMat(camera, (Vec2){camera->viewRect.x,camera->viewRect.y});
+    camera_updateProjectionMat(camera, vec2_new(camera->viewRect.x,camera->viewRect.y));
 
     PBR_GLOBAL_UBO ubo;
     ubo.view = camera->view;

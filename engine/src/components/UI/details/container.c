@@ -8,10 +8,10 @@
 
 const u16 verticesCount = 4;
 static const UI_Vertex ui_vertices[] = {
-    {{.5f,.5f}, {1.f, 1.f}},
-    {{-.5f,.5f}, {0.f, 1.f}},
-    {{-.5f,-.5f}, {0.f, 0.f}},
-    {{.5f,-.5f}, {1.f, 0.f}}
+    {{ .x =  .5f, .y =  .5f}, { .x = 1.f, .y = 1.f}},
+    {{ .x = -.5f, .y =  .5f}, { .x = 0.f, .y = 1.f}},
+    {{ .x = -.5f, .y = -.5f}, { .x = 0.f, .y = 0.f}},
+    {{ .x =  .5f, .y = -.5f}, { .x = 1.f, .y = 0.f}}
 };
 
 const u16 indicesCount = 6;
@@ -30,7 +30,7 @@ UI_Element ui_create_container(UI_Style style, Renderer* r){
         r->device,
         r->queue.graphics,
         r->commandPool,
-        verticesCount, ui_vertices, sizeof(UI_Vertex),
+        verticesCount, (void*)ui_vertices, sizeof(UI_Vertex),
         &new.renderer.vertexBuffer,
         &new.renderer.vertexBufferMemory
     );

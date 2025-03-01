@@ -222,9 +222,9 @@ void renderer_createVulkanInstance(VkInstance *instance)
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pApplicationInfo = &appInof,
         .enabledExtensionCount = ext_count,
-        .ppEnabledExtensionNames = ext_names,
+        .ppEnabledExtensionNames = (const char* const*)ext_names,
         .enabledLayerCount = isValidationLayersEnabled() ? validationLayersCount() : 0,
-        .ppEnabledLayerNames = isValidationLayersEnabled() ? validationLayersNames() : 0,
+        .ppEnabledLayerNames = isValidationLayersEnabled() ? (const char* const*)validationLayersNames() : 0,
         .pNext = isValidationLayersEnabled() ? &debugMessangerInfo : 0};
 
     VkResult res = vkCreateInstance(&info, 0, instance);

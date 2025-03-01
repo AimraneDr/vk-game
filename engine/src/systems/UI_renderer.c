@@ -16,6 +16,7 @@
 //TODO: temporarry
 #include <math/mat.h>
 #include <math/vec2.h>
+#include <math/vec4.h>
 #include <math/trigonometry.h>
 #include "game.h"
 
@@ -77,7 +78,6 @@ void start(void* _state, void* gState){
         .depth_test_enable = VK_TRUE,
         .depth_write_enable = VK_TRUE,
         .depth_compare_op = VK_COMPARE_OP_LESS,
-        .subpass_index = 0,
         .push_constant_size = sizeof(UI_PushConstant),
         .push_constant_stage = VK_SHADER_STAGE_VERTEX_BIT,
         .src_color_blend_factor = VK_BLEND_FACTOR_SRC_ALPHA,
@@ -106,10 +106,10 @@ void start(void* _state, void* gState){
     ui_createDescriptorSets(r->device, state->grapgicsPipeline.descriptorSetLayout, state->grapgicsPipeline.descriptorPool, state->grapgicsPipeline.uniform.global.buffers, state->grapgicsPipeline.uniform.element.buffers, state->grapgicsPipeline.uniform.element.alignedUboSize, state->grapgicsPipeline.textureImageView, state->grapgicsPipeline.textureSampler,state->grapgicsPipeline.descriptorSets);
 }
 
-typedef struct ui_event_context{
+typedef struct ui_event_context_t{
     Transform2D* transform;
     UI_Element* elem;
-};
+}ui_event_context;
 
 EVENT_CALLBACK(onMouseMove){
     GameState* gState = listener;
@@ -123,9 +123,9 @@ EVENT_CALLBACK(onMouseMove){
 
     Mat4 inv_mat = mat4_inverse(transform->mat);
     Mat4 inv_local_mat = mat4_inverse(transform->__local_mat);
-    if (mat4_compare(inv_mat, MAT4_ZERO) || mat4_compare(inv_local_mat, MAT4_ZERO)) return;
+    if (mat4_compare(inv_mat, mat4_zero()) || mat4_compare(inv_local_mat, mat4_zero())) return;
     
-    Vec4 mouse_world = {mouse_pos.x, mouse_pos.y, 0.0f, 1.0f};
+    Vec4 mouse_world = vec4_new(mouse_pos.x, mouse_pos.y, 0.0f, 1.0f);
     Vec4 mouse_local = mat4_mulVec4(mat4_mul(inv_local_mat,inv_mat), mouse_world);
     
     Vec2 halfSize = vec2_new(elem->style.width/2.f,elem->style.height/2.f);
@@ -261,7 +261,7 @@ void destroy(void* _state, void* gState){
 /////      INTERNAL     ///////
 ///////////////////////////////
 ///////////////////////////////
-static const u8 bindingsCount = 3;
+#define bindingsCount 3
 
 void ui_createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out){
     VkDescriptorSetLayoutBinding global_uboLayoutBinding = {

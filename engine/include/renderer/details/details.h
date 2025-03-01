@@ -4,10 +4,10 @@
 #include "data_types.h"
 
 bool isValidationLayersEnabled();
-char* const* validationLayersNames();
+const char* const* validationLayersNames();
 const u32 validationLayersCount();
 
-char* const* deviceExtensionsNames();
+const char** deviceExtensionsNames();
 const u32 deviceExtensionsCount();
 
 #endif

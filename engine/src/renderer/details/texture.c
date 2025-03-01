@@ -97,7 +97,7 @@ void generateMipmaps(VkPhysicalDevice gpu, VkDevice device, VkCommandPool cmdPoo
 }
 
 void createTextureImage(VkPhysicalDevice gpu, VkDevice device, VkCommandPool cmdPool, VkQueue queue, u16* outMipLevels, VkImage* outTextureImage, VkDeviceMemory* outTextureMemory){
-    u32 texWidth, texHeight, texChannels;
+    i32 texWidth, texHeight, texChannels;
     stbi_uc* pixels = stbi_load("./../resources/textures/viking_room.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     VkDeviceSize imageSize = texWidth * texHeight * 4;
 

@@ -15,7 +15,7 @@ void createFramebuffers(
     ){
         VkFramebuffer* temp = (VkFramebuffer*)malloc(sizeof(VkFramebuffer) * swapchain_image_count);
         for(u32 i=0; i < swapchain_image_count; i++){
-            const u8 attachmentsCount = 3;
+            #define attachmentsCount 3
             VkImageView attachments[attachmentsCount] = {
                 colorImageView,
                 depthImageView,

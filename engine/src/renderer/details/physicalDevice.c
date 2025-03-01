@@ -59,7 +59,7 @@ bool checkDeviceExtensionsSupport(VkPhysicalDevice device)
     vkEnumerateDeviceExtensionProperties(device, 0, &ext_count, ext_props);
     for (u32 i = 0; i < deviceExtensionsCount(); i++)
     {
-        char *ext_name = deviceExtensionsNames()[i];
+        const char *ext_name = deviceExtensionsNames()[i];
         bool found = false;
         for (u32 j = 0; j < ext_count; j++)
         {

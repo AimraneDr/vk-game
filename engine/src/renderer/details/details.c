@@ -2,14 +2,14 @@
 #include "renderer/render_types.h"
 
 #define DeviceExtensionsCount 1
-const char* const* DeviceExtensionsNames[DeviceExtensionsCount] = {
+const char* DeviceExtensionsNames[DeviceExtensionsCount] = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
 #ifdef _DEBUG
     const bool enableValidationLayers = true;
     #define ValidationLayersCount 1
-    const char* const* ValidationLayersNames[ValidationLayersCount] = {
+    const char* const ValidationLayersNames[ValidationLayersCount] = {
         "VK_LAYER_KHRONOS_validation"
     };
 #else
@@ -21,7 +21,7 @@ const char* const* DeviceExtensionsNames[DeviceExtensionsCount] = {
 bool isValidationLayersEnabled(){
     return enableValidationLayers;
 }
-char* const* validationLayersNames(){
+const char* const* validationLayersNames(){
     return ValidationLayersNames;
 }
 
@@ -29,7 +29,7 @@ const u32 validationLayersCount(){
     return (u32)ValidationLayersCount;
 }
 
-char* const* deviceExtensionsNames(){
+const char** deviceExtensionsNames(){
     return DeviceExtensionsNames;
 }
 

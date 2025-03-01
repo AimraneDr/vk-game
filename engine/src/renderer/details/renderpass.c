@@ -102,7 +102,7 @@ void createRenderPass(VkPhysicalDevice gpu, VkDevice device, VkFormat swapchain_
         .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
     };
 
-    const u8 attachmentsCount = 3;
+    #define attachmentsCount 3
     VkAttachmentDescription attachements[attachmentsCount] = {colorAttachment, depthAttachment, colorResolveAttachment};
     
     const u8 subpassesCount = 2;

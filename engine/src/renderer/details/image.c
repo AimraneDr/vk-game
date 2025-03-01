@@ -78,8 +78,8 @@ void transitionImageLayout(VkDevice device, VkCommandPool cmdPool, VkQueue queue
         .dstAccessMask = 0  
     };
 
-    VkPipelineStageFlags sourceStage;
-    VkPipelineStageFlags destinationStage;
+    VkPipelineStageFlags sourceStage = {0};
+    VkPipelineStageFlags destinationStage = {0};
 
     if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;

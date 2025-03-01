@@ -1,7 +1,7 @@
 #include "renderer/details/indexBuffer.h"
 #include "renderer/details/buffer.h"
 
-void createIndexBuffer(VkPhysicalDevice gpu, VkDevice device, VkQueue queue, VkCommandPool cmdPool, u32 indicesCount, u16* indices, VkBuffer* outBuff, VkDeviceMemory* outMem){
+void createIndexBuffer(VkPhysicalDevice gpu, VkDevice device, VkQueue queue, VkCommandPool cmdPool, u32 indicesCount, const u32* indices, VkBuffer* outBuff, VkDeviceMemory* outMem){
     u32 buffSize = sizeof(u32) * indicesCount;
 
     VkBuffer stagingBuffer;

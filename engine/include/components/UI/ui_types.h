@@ -48,10 +48,6 @@ typedef struct UI_Style_t {
 #define ACTION_CALLBACK(name) void name(GameState* state, EntityID e, struct UI_Element_t* elem)
 
 typedef struct UI_Element_t{
-    struct UI_Element_t* parent;
-    struct UI_Element_t* children;
-
-
     UI_Style style;
     u32 order;             // Render order priority
 

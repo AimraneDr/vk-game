@@ -39,7 +39,9 @@ VkFormat findSupportedFormat(VkPhysicalDevice gpu, const VkFormat* candidates, c
         }
     }
 
+    
     LOG_ERROR("failed to find supported format!");
+    return 0;
 }
 
 VkFormat findDepthFormat(VkPhysicalDevice gpu) {

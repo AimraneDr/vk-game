@@ -44,14 +44,14 @@ static ACTION_CALLBACK(_onMouseLHold){
 void start(void* _state,  void* gState){
     Renderer* r = &((GameState*)gState)->renderer;
     Scene* scene = &((GameState*)gState)->scene;
-    Camera* camera = &((GameState*)gState)->camera;
+
     CharacterController controller = {
         .MoveSpped = 5.f,
         .RotateSpeed = 45.f
     };
     Transform2D containerTransform = {
-        .position = {0.f, .5f},
-        .scale = {1.f, 1.f},
+        .position = vec2_new(0.f, .5f),
+        .scale = vec2_new(1.f, 1.f),
         .rotation = 0.f,
     };
     UI_Style containerStyle = {
@@ -82,14 +82,14 @@ void start(void* _state,  void* gState){
     ADD_COMPONENT(scene, container, Transform2D, &containerTransform);
     EntityID container0 = newEntity(scene);
     ecs_add_child(scene, container0, container);
-    containerTransform.position = (Vec2){0,0};
-    containerTransform.scale = (Vec2){2,2};
+    containerTransform.position = vec2_new(0,0);
+    containerTransform.scale = vec2_new(2,2);
     ADD_COMPONENT(scene, container0, UI_Element, &c2);
     ADD_COMPONENT(scene, container0, Transform2D, &containerTransform);
     
     EntityID container1 = newEntity(scene);
-    containerTransform.position = (Vec2){.2,.3};
-    containerTransform.scale = (Vec2){1.3,.5};
+    containerTransform.position = vec2_new(.2,.3);
+    containerTransform.scale = vec2_new(1.3,.5);
     ADD_COMPONENT(scene, container1, UI_Element, &c3);
     ADD_COMPONENT(scene, container1, Transform2D, &containerTransform);
     ecs_add_child(scene, container, container1);
@@ -100,7 +100,7 @@ void start(void* _state,  void* gState){
 static void update_entity(void* _state,  void* gState, EntityID entity){
 
     InputManager* inputs = &((GameState*)gState)->inputer;
-    Camera* camera = &((GameState*)gState)->camera;
+
     f64 dt = ((GameState*)gState)->clock.deltaTime;
     UI_Element* E = GET_COMPONENT(&((GameState*)gState)->scene, entity, UI_Element);
     Transform2D* T = GET_COMPONENT(&((GameState*)gState)->scene, entity, Transform2D);
@@ -139,40 +139,40 @@ static void update_entity(void* _state,  void* gState, EntityID entity){
         //RED
         if(is_key_pressed(inputs, KEY_1) && is_key_pressed(inputs, KEY_SHIFT)){
             E->style.background.color.x -= step*dt;
-            CLAMP(E->style.background.color.x, 0, 1);
+            E->style.background.color.x = CLAMP(E->style.background.color.x, 0, 1);
         }else if(is_key_pressed(inputs, KEY_1)){
             E->style.background.color.x += step*dt;
-            CLAMP(E->style.background.color.x, 0, 1);
+            E->style.background.color.x = CLAMP(E->style.background.color.x, 0, 1);
         }
         //BLUE
         if(is_key_pressed(inputs, KEY_2) && is_key_pressed(inputs, KEY_SHIFT)){
             E->style.background.color.y -= step*dt;
-            CLAMP(E->style.background.color.y, 0, 1);
+            E->style.background.color.y = CLAMP(E->style.background.color.y, 0, 1);
         }else if(is_key_pressed(inputs, KEY_2)){
             E->style.background.color.y += step*dt;
-            CLAMP(E->style.background.color.y, 0, 1);
+            E->style.background.color.y = CLAMP(E->style.background.color.y, 0, 1);
         }
         //GREEM
         if(is_key_pressed(inputs, KEY_3) && is_key_pressed(inputs, KEY_SHIFT)){
             E->style.background.color.z -= step*dt;
-            CLAMP(E->style.background.color.z, 0, 1);
+            E->style.background.color.z = CLAMP(E->style.background.color.z, 0, 1);
         }else if(is_key_pressed(inputs, KEY_3)){
             E->style.background.color.z += step*dt;
-            CLAMP(E->style.background.color.z, 0, 1);
+            E->style.background.color.z = CLAMP(E->style.background.color.z, 0, 1);
         }
         //ALPHA
         if(is_key_pressed(inputs, KEY_4) && is_key_pressed(inputs, KEY_SHIFT)){
             E->style.background.color.w -= step*dt;
-            CLAMP(E->style.background.color.w, 0, 1);
+            E->style.background.color.w = CLAMP(E->style.background.color.w, 0, 1);
         }else if(is_key_pressed(inputs, KEY_4)){
             E->style.background.color.w += step*dt;
-            CLAMP(E->style.background.color.w, 0, 1);
+            E->style.background.color.w = CLAMP(E->style.background.color.w, 0, 1);
         }
     }
 }
 
 void destroy_entity(void* _state,  void* gState, EntityID entity){
-    InternalState* state = _state;
+    // InternalState* state = _state;
     Scene* scene = &((GameState*)gState)->scene;
     Renderer* r = &((GameState*)gState)->renderer;
 

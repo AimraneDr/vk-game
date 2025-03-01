@@ -2,8 +2,8 @@
 
 #include "core/debugger.h"
 
-static const u8 bindingsCount = 2;
-static const u8 ui_bindingsCount = 3;
+#define bindingsCount 2
+#define ui_bindingsCount 3
 
 void PBR_createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out){
     VkDescriptorSetLayoutBinding uboLayoutBinding = {

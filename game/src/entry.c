@@ -62,9 +62,9 @@ void start(GameState* state){
     EntityID vikingRoom0 = newEntity(&state->scene);
     EntityID cube = newEntity(&state->scene);
     Transform initT = {
-        .position = {1,0.5,-1},
-        .rotation = {-45,0,0},
-        .scale = {1,1,1}
+        .position = vec3_new(1,0.5,-1),
+        .rotation = vec3_new(-45,0,0),
+        .scale = vec3_new(1,1,1)
     };
     ADD_COMPONENT(&state->scene, vikingRoom0, Transform, &initT);
     ADD_COMPONENT(&state->scene, vikingRoom0, MeshRenderer, &mesh0);

@@ -36,7 +36,7 @@ static bool vertices_equal(const Vertex* a, const Vertex* b) {
 }
 
 // Hashmap entry for vertex deduplication
-typedef struct {
+typedef struct HashMapEntry{
     Vertex vertex;
     u32 index;
     struct HashMapEntry* next;
@@ -61,7 +61,7 @@ static void hashmap_destroy(HashMap* map) {
     for (size_t i = 0; i < map->bucket_count; i++) {
         HashMapEntry* entry = map->buckets[i];
         while (entry) {
-            HashMapEntry* next = entry->next;
+            HashMapEntry* next = (HashMapEntry*)entry->next;
             free(entry);
             entry = next;
         }
@@ -81,14 +81,14 @@ static u32 hashmap_find_or_insert(HashMap* map, const Vertex* vertex, u32 next_i
         if (vertices_equal(&entry->vertex, vertex)) {
             return entry->index;
         }
-        entry = entry->next;
+        entry = (HashMapEntry*)entry->next;
     }
     
     // Insert new vertex
     entry = malloc(sizeof(HashMapEntry));
     entry->vertex = *vertex;
     entry->index = next_index;
-    entry->next = map->buckets[bucket];
+    entry->next = (HashMapEntry*)map->buckets[bucket];
     map->buckets[bucket] = entry;
     
     return next_index;

@@ -5,6 +5,8 @@
 #include "components/UI/uiComponents.h"
 #include <collections/DynamicArray.h>
 #include <math/mat.h>
+#include <math/vec4.h>
+#include <math/vec2.h>
 
 #include "ecs/ecs.h"
 
@@ -71,11 +73,11 @@ void recordCommandBuffer(GameState* gState, uint32_t imageIndex)
         return;
     }
 
-    const u8 clearValuesCount = 2;
+    #define clearValuesCount 2
     VkClearValue clearValues[clearValuesCount] = {
         //0
         {
-            .color = {0.0f, 0.0f, 0.0f, 1.0f}
+            .color = {{0.0f, 0.0f, 0.0f, 1.0f}}
         },
         //1
         {

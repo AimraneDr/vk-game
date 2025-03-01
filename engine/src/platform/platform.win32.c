@@ -288,6 +288,8 @@ void window_init(PlatformInitConfig info, PlatformState* out) {
         case WINDOW_STATE_FLOATING:
             cmdShow = SW_SHOW;
             break;
+        default:
+            break;
     }
 
     ShowWindow(hwnd, cmdShow);

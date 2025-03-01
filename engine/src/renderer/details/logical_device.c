@@ -33,12 +33,12 @@ void createLogicalDevice(const VkPhysicalDevice device, const VkSurfaceKHR surfa
         .queueCreateInfoCount = indices.familiesCount,
         .pEnabledFeatures = &enabledFeatures,
         .enabledExtensionCount = deviceExtensionsCount(),
-        .ppEnabledExtensionNames = deviceExtensionsNames()
+        .ppEnabledExtensionNames = (const char* const*)deviceExtensionsNames()
     };
     
     if(isValidationLayersEnabled()){
         createInfo.enabledLayerCount = validationLayersCount();
-        createInfo.ppEnabledLayerNames = validationLayersNames();
+        createInfo.ppEnabledLayerNames = (const char* const*)validationLayersNames();
     }else{
         createInfo.enabledLayerCount = 0;
     }

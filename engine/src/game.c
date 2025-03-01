@@ -10,6 +10,7 @@
 #include <math/mathTypes.h>
 #include <collections/DynamicArray.h>
 #include <math/vec3.h>
+#include <math/vec2.h>
 
 #include "components/Hierarchy.h"
 #include "components/transform.h"
@@ -87,7 +88,7 @@ void game_init(GameConfig config, GameState* out){
     input_system_init(&out->inputer);
     asset_manager_init(&out->assetManager);
     
-    out->camera.viewRect = (Vec2i){out->platform.display.width,out->platform.display.height};
+    out->camera.viewRect = vec2i_new(out->platform.display.width,out->platform.display.height);
     //ecs
     ecs_init(out);
     RegisterDefaultComponents(&out->scene);
@@ -202,10 +203,10 @@ void GameInitConfigSetDefaults(GameConfig* config) {
         config->platform.display.startState = base.platform.display.startState;
     }
     if (config->camera.pos.x == 0.0f && config->camera.pos.y == 0.0f && config->camera.pos.z == 0.0f) {
-        config->camera.pos = (Vec3){base.camera.pos.x, base.camera.pos.y, base.camera.pos.z};
+        config->camera.pos = vec3_new(base.camera.pos.x, base.camera.pos.y, base.camera.pos.z);
     }
     if (config->camera.scale.x == 0.0f && config->camera.scale.y == 0.0f && config->camera.scale.z == 0.0f) {
-        config->camera.scale = (Vec3){base.camera.scale.x, base.camera.scale.y, base.camera.scale.z};
+        config->camera.scale = vec3_new(base.camera.scale.x, base.camera.scale.y, base.camera.scale.z);
     }
     if (config->camera.orthographicSize == 0.0f) {
         config->camera.orthographicSize = base.camera.orthographicSize;
