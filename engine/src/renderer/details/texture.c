@@ -1,14 +1,70 @@
 #include "renderer/details/texture.h"
 
 #include "core/debugger.h"
+#include "assets/asset_manager.h"
 #include "renderer/details/buffer.h"
 #include "renderer/details/commandBuffer.h"
 #include "renderer/details/image.h"
 #include "renderer/details/image_view.h"
+#include "renderer/render_context.h"
 
-#include <math/mathUtils.h>
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
+
+void createTextureImage(VkPhysicalDevice gpu, VkDevice device, VkCommandPool cmdPool, VkQueue queue, void* pixels, Texture* outTexture);
+void createTextureImageView(VkDevice device, VkImage textureImage, u16 mipLevels, VkImageView* outTextureImageView);
+void createTextureImageSampler(VkPhysicalDevice gpu, VkDevice device, u16 mipLevels, VkSampler* outTextureSampler);
+void destroyTextureImage(VkDevice device, VkImage   , VkDeviceMemory textureImageMemory);
+void destroyTextureImageView(VkDevice device, VkImageView textureImageView);
+void destroyTextureSampler(VkDevice device, VkSampler sampler);
+
+
+/// @brief the out->hight, out->width, out->mipmaplevels should be set before passing it down
+/// @param pixels 
+/// @param out 
+void createTexture(void* pixels, Texture* out){
+    RendererContext* rc = getRendererContext();
+    createTextureImage(rc->gpu, rc->device, rc->commandPool, rc->queue.graphics, pixels, out);
+    createTextureImageView(rc->device, out->image, out->mipLevels,&out->imageView);
+    createTextureImageSampler(rc->gpu, rc->device, out->mipLevels, &out->sampler);
+}
+
+void destroyTexture(Texture* tex){
+    RendererContext* rc = getRendererContext();
+    destroyTextureImage(rc->device, tex->image, tex->memory);
+    destroyTextureImageView(rc->device, tex->imageView);
+    destroyTextureSampler(rc->device, tex->sampler);
+}
+
+void createDefaultTextures(Material* default_material){
+    //TODO: change to aquiring the texture instead of loading it, the load opperation should be handled by the assets manager
+    Asset* texture = load_asset("./../resources/textures/default.png", "default");
+    
+    //albedo
+    default_material->albedo = texture->data;
+    //normal
+    default_material->normal = texture->data;
+    //mtalic/roughness/AO
+    default_material->metalRoughAO = texture->data;
+    //emmision
+    default_material->emissive = texture->data;
+    //height
+    default_material->height = texture->data;
+}
+
+void destroyDefaultTextures(Material* default_material){
+    //already released by the asset manager when shutting down
+    // release_asset("default", ASSET_TYPE_TEXTURE);
+
+    //albedo
+    default_material->albedo = 0;
+    //normal
+    default_material->normal = 0;
+    //mtalic/roughness/AO
+    default_material->metalRoughAO = 0;
+    //emmision
+    default_material->emissive = 0;
+    //height
+    default_material->height = 0;
+}
 
 void generateMipmaps(VkPhysicalDevice gpu, VkDevice device, VkCommandPool cmdPool, VkQueue queue, VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
     VkFormatProperties formatProperties;
@@ -96,21 +152,10 @@ void generateMipmaps(VkPhysicalDevice gpu, VkDevice device, VkCommandPool cmdPoo
     endSingleTimeCommands(device, cmdPool, queue, &commandBuffer);
 }
 
-void createTextureImage(VkPhysicalDevice gpu, VkDevice device, VkCommandPool cmdPool, VkQueue queue, u16* outMipLevels, VkImage* outTextureImage, VkDeviceMemory* outTextureMemory){
-    i32 texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load("./../resources/textures/viking_room.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-    VkDeviceSize imageSize = texWidth * texHeight * 4;
-
-    *outMipLevels = (u16)FLOOR(log2(MAX(texWidth, texHeight))) + 1;
-
-
-    if (!pixels) {
-        LOG_ERROR("failed to load texture image!");
-    }
-
+void createTextureImage(VkPhysicalDevice gpu, VkDevice device, VkCommandPool cmdPool, VkQueue queue, void* pixels, Texture* outTexture){
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
-
+    VkDeviceSize imageSize = outTexture->width*outTexture->height * 4 ; //4 channels
     createBuffer(gpu, device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory);
 
     void* data;
@@ -118,18 +163,17 @@ void createTextureImage(VkPhysicalDevice gpu, VkDevice device, VkCommandPool cmd
         memcpy(data, pixels, (u32)imageSize);
     vkUnmapMemory(device, stagingBufferMemory);
 
-    stbi_image_free(pixels);
 
-    createImage(gpu, device, texWidth, texHeight, *outMipLevels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, outTextureImage, outTextureMemory);
+    createImage(gpu, device, outTexture->width, outTexture->height, outTexture->mipLevels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &outTexture->image, &outTexture->memory);
     
-    transitionImageLayout(device, cmdPool, queue, *outMipLevels, *outTextureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    copyBufferToImage(device, cmdPool, queue, stagingBuffer, *outTextureImage, texWidth, texHeight);
+    transitionImageLayout(device, cmdPool, queue, outTexture->mipLevels, outTexture->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    copyBufferToImage(device, cmdPool, queue, stagingBuffer, outTexture->image, outTexture->width, outTexture->height);
     // transitionImageLayout(device, cmdPool, queue, *outMipLevels, *outTextureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     vkDestroyBuffer(device, stagingBuffer, 0);
     vkFreeMemory(device, stagingBufferMemory, 0);
 
-    generateMipmaps(gpu, device, cmdPool, queue, *outTextureImage, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, *outMipLevels);
+    generateMipmaps(gpu, device, cmdPool, queue, outTexture->image, VK_FORMAT_R8G8B8A8_SRGB, outTexture->width, outTexture->height, outTexture->mipLevels);
 }
 
 void createTextureImageSampler(VkPhysicalDevice gpu, VkDevice device, u16 mipLevels, VkSampler* outTextureSampler){

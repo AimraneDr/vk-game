@@ -13,5 +13,4 @@ void renderer_init(RendererInitConfig config, GameState* gState);
 void renderer_draw(GameState* gState);
 void renderer_shutdown(GameState* gState);
 
-
 #endif //RENDERER_H

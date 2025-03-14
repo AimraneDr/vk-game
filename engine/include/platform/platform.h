@@ -16,5 +16,6 @@ void window_PullEvents(PlatformState* state);
 
 /// @return time in seconds
 f64 platform_get_time(void);
+void platform_sleep(f64 seconds);
 
 #endif //PLATFORM_H

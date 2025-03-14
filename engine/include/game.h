@@ -28,6 +28,8 @@ typedef struct GameConfig{
     RendererInitConfig renderer;
 
     bool suspendOnMinimize;
+
+    u32 targetFPS;
 }GameConfig;
 
 typedef struct GameState_t{
@@ -35,7 +37,6 @@ typedef struct GameState_t{
     
     PlatformState platform;
     InputManager inputer;
-    AssetManager assetManager;
     Renderer renderer;
     Clock clock;
     
@@ -48,6 +49,8 @@ typedef struct GameState_t{
     
     String name;
     bool suspended;
+
+    f64 targetFrameTime;
 }GameState;
 
 typedef struct GameInterface_t{

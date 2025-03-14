@@ -57,10 +57,10 @@ void endSingleTimeCommands(VkDevice device, VkCommandPool cmdPool, VkQueue queue
 void recordCommandBuffer(GameState* gState, uint32_t imageIndex) 
 {
     Renderer* r = &gState->renderer;
-    VkCommandBuffer commandBuffer = r->commandBuffers[r->currentFrame]; 
+    VkCommandBuffer commandBuffer = r->context->commandBuffers[r->currentFrame]; 
     VkRenderPass renderpass = r->renderPass; 
-    VkFramebuffer* swapChainFramebuffers = r->swapchainFrameBuffers;
-    VkExtent2D extent = r->swapchainExtent;
+    VkFramebuffer* swapChainFramebuffers = r->context->swapchainFrameBuffers;
+    VkExtent2D extent = r->context->swapchainExtent;
 
     VkCommandBufferBeginInfo beginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,

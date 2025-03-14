@@ -411,4 +411,14 @@ f64 platform_get_time(void) {
     return (f64)counter.QuadPart * frequency_inv;
 }
 
+void platform_sleep(f64 seconds){
+    if (seconds <= 0) return;
+    
+    const f64 start = platform_get_time();
+    while (platform_get_time() - start < seconds) {
+        // Yield CPU to other threads
+        Sleep(0);
+    }
+}
+
 #endif

@@ -13,7 +13,7 @@ void camera_updateViewMat(Camera* camera){
         deg_to_rad(camera->transform.rotation.z)
     );
     camera->view = mat4_viewYXZ(
-        camera->transform.position, radRot); 
+        camera->transform.position, radRot);
 }
 
 void camera_updateProjectionMat(Camera* camera, Vec2 frameExtent){

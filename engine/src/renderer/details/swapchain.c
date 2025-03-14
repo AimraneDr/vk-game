@@ -57,14 +57,10 @@ VkPresentModeKHR chooseSeapChainPresentMode(VkPresentModeKHR *modes, u32 modes_c
 {
     for (u32 i = 0; i < modes_count; i++)
     {
-        if (modes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
+        if (modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
         {
             return modes[i];
         }
-        // if (modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
-        // {
-        //     return modes[i];
-        // }
     }
     return VK_PRESENT_MODE_FIFO_KHR;
 }

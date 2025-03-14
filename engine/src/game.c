@@ -4,6 +4,7 @@
 #include "renderer/renderer.h"
 #include "core/debugger.h"
 #include "core/files.h"
+#include "core/memsys.h"
 #include "core/events.h"
 #include "core/input.h"
 #include "assets/asset_manager.h"
@@ -80,13 +81,15 @@ void game_init(GameConfig config, GameState* out){
     out->camera.fieldOfView = config.camera.fieldOfView;
     out->camera.orthographicSize = config.camera.orthographicSize;
     out->camera.useOrthographic = config.camera.useOrthographic;
+    out->targetFrameTime = config.targetFPS ? 1.0 / config.targetFPS : 0.0;
     
+    memsys_init();
     init_event_sys();
     
     window_init(info, &out->platform);
     
     input_system_init(&out->inputer);
-    asset_manager_init(&out->assetManager);
+    asset_manager_init();
     
     out->camera.viewRect = vec2i_new(out->platform.display.width,out->platform.display.height);
     //ecs
@@ -130,9 +133,12 @@ void game_run(GameInterface Interface){
     if(Interface.start) Interface.start(&state);
 
     ecs_systems_initialize(&state);
+    Clock frame_timer;
     clock_start(&state.clock);
+    clock_start(&frame_timer);
     while (!state.platform.display.shouldClose)
     {
+        clock_tick(&frame_timer);
         if(!state.suspended){
             clock_tick(&state.clock);
             
@@ -147,6 +153,12 @@ void game_run(GameInterface Interface){
         input_system_update(&state.inputer, state.clock.deltaTime);
         window_PullEvents(&state.platform);
         ecs_update(&state.scene);
+
+        clock_tick(&frame_timer);
+        if (frame_timer.deltaTime < state.targetFrameTime)
+        {
+            platform_sleep(state.targetFrameTime - frame_timer.deltaTime);
+        }
     }
 
     ecs_systems_shutdown(&state);
@@ -158,12 +170,13 @@ void game_run(GameInterface Interface){
 
 void game_shutdown(GameState* state){
 
-    asset_manager_shutdown(&state->assetManager);
+    asset_manager_shutdown();
     renderer_shutdown(state);
     ecs_shutdown(&state->scene);
     window_destroy(&state->platform);
 
     shutdown_event_sys();
+    memsys_shutdown();
     str_free(&state->platform.display.title);
     return;
 }
@@ -187,7 +200,8 @@ void GameInitConfigSetDefaults(GameConfig* config) {
             .pos = vec3_new(0.f,1.f,0.f),
             .rot = vec3_new(0.f,0.f,0.f),
             .scale = vec3_new(1.f,1.f,1.f)
-        }
+        },
+        .targetFPS = 0
     };
     // Set display defaults
     if (config->platform.title.len == 0) {

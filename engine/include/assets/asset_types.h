@@ -20,11 +20,7 @@ typedef struct Asset_t{
     AssetType type;
     void* data;
     String name;
+    u32 ref_count;
 }Asset;
-
-typedef struct AssetManager_t {
-    Asset* assets[ASSET_MAX_TYPE];
-    u32 asset_count;
-} AssetManager;
 
 #endif //ASSET_TYPES_H

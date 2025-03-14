@@ -1,4 +1,4 @@
-#include "assets/details/model_loader.h"
+#include "assets/loaders/model_loader.h"
 #include "math/mathTypes.h"
 #include "core/files.h"
 #include "core/debugger.h"
@@ -7,6 +7,8 @@
 #include <string.h>
 #include <string/str.h>
 #include <math/mathUtils.h>
+#include "renderer/meshData.h"
+#include "core/memsys.h"
 
 
 #define TINYOBJ_LOADER_C_IMPLEMENTATION
@@ -174,27 +176,18 @@ Asset load_obj(const char* path) {
     }
 
     // Create final model with deduplicated vertices
-    Model* model = malloc(sizeof(Model));
-    if (!model) {
-        LOG_ERROR("Error: Memory allocation failed for Model");
-        free(unique_vertices);
-        free(indices);
-        hashmap_destroy(vertex_map);
-        asset.data = NULL;
-        return asset;
-    }
+    Model model = {0};
+    
 
-    model->id = 0;
-    model->vertex_count = unique_vertex_count;
-    model->index_count = attrib.num_faces;
-    model->vertices = malloc(sizeof(Vertex) * unique_vertex_count);
-    model->indices = malloc(sizeof(u32) * attrib.num_faces);
+    model.vertex_count = unique_vertex_count;
+    model.index_count = attrib.num_faces;
+    model.vertices = malloc(sizeof(Vertex) * unique_vertex_count);
+    model.indices = malloc(sizeof(u32) * attrib.num_faces);
 
-    if (!model->vertices || !model->indices) {
+    if (!model.vertices || !model.indices) {
         LOG_ERROR("Error: Memory allocation failed for vertices/indices");
-        free(model->vertices);
-        free(model->indices);
-        free(model);
+        free(model.vertices);
+        free(model.indices);
         free(unique_vertices);
         free(indices);
         hashmap_destroy(vertex_map);
@@ -203,8 +196,8 @@ Asset load_obj(const char* path) {
     }
 
     // Copy deduplicated data to final model
-    memcpy(model->vertices, unique_vertices, sizeof(Vertex) * unique_vertex_count);
-    memcpy(model->indices, indices, sizeof(u32) * attrib.num_faces);
+    memcpy(model.vertices, unique_vertices, sizeof(Vertex) * unique_vertex_count);
+    memcpy(model.indices, indices, sizeof(u32) * attrib.num_faces);
 
     // Clean up temporary storage
     free(unique_vertices);
@@ -216,18 +209,22 @@ Asset load_obj(const char* path) {
     tinyobj_shapes_free(shapes, num_shapes);
     tinyobj_materials_free(materials, num_materials);
 
-    asset.data = model;
+    // use the model to create a compatible renderer representaion for it, the assign it to the asset's data 
+    MeshData* meshDara = memsys_alloc(sizeof(MeshData), MEM_TYPE_GEOMETRY);
+    createMeshData(&model, meshDara);
+    asset.data = meshDara;
+
+    free(model.vertices);
+    free(model.indices);
+
     return asset;
 }
 
 void release_obj(Asset* asset) {
     if (!asset || asset->type != ASSET_TYPE_MODEL || !asset->data) return;
     
-    Model* model = (Model*)asset->data;
-    free(model->vertices);
-    free(model->indices);
-    free(model);
-    
+    destroyMeshData((MeshData*)asset->data);
+    memsys_free(asset->data, MEM_TYPE_GEOMETRY);
     asset->data = NULL;
     str_free(&asset->name);
 }

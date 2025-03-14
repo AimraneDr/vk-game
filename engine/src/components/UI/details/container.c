@@ -25,20 +25,21 @@ UI_Element ui_create_container(UI_Style style, Renderer* r){
 
     new.renderer.indicesCount = indicesCount;
 
+    //TODO: reference a quad meshData instead
     createVertexBuffer(
-        r->gpu,
-        r->device,
-        r->queue.graphics,
-        r->commandPool,
+        r->context->gpu,
+        r->context->device,
+        r->context->queue.graphics,
+        r->context->commandPool,
         verticesCount, (void*)ui_vertices, sizeof(UI_Vertex),
         &new.renderer.vertexBuffer,
         &new.renderer.vertexBufferMemory
     );
     createIndexBuffer(
-        r->gpu,
-        r->device,
-        r->queue.graphics,
-        r->commandPool,
+        r->context->gpu,
+        r->context->device,
+        r->context->queue.graphics,
+        r->context->commandPool,
         indicesCount, ui_indices,
         &new.renderer.indexBuffer,
         &new.renderer.indexBufferMemory

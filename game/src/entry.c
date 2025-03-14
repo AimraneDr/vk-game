@@ -33,7 +33,7 @@ void config(GameConfig* config){
     
     config->camera.farPlane = 1000.f;
     config->camera.nearPlane = 0.01f;
-    config->camera.fieldOfView = 60.f;
+    config->camera.fieldOfView = 45.f;
     config->camera.pos = vec3_new(0.f,5.f,-5.f);
     config->camera.rot = vec3_new(45.f,0.f,0.f);
     config->camera.orthographicSize = 3.f;
@@ -42,6 +42,8 @@ void config(GameConfig* config){
     config->renderer.msaaSamples = 4;
 
     config->suspendOnMinimize = true;
+
+    config->targetFPS = 180;
 }
 
 void start(GameState* state){
@@ -50,14 +52,13 @@ void start(GameState* state){
     ecs_register_system(&state->scene, &sys);
 
 
-    Asset a = load_asset(&state->assetManager, "./../resources/models/viking_room.obj");
-    Asset a1 = load_asset(&state->assetManager, "./../resources/models/plane.obj");
-    MeshRenderer mesh0,plane;
-    createMeshRenderer(a.data, &state->renderer, &mesh0);
-    createMeshRenderer(a1.data, &state->renderer, &plane);
-    release_asset(&state->assetManager, &a);
-    release_asset(&state->assetManager, &a1);
+    load_asset("./../resources/models/viking_room.obj", "viking_room");
+    load_asset("./../resources/models/plane.obj", "plane");
 
+    MeshRenderer mesh0,plane;
+    createMeshRenderer("viking_room", &mesh0);
+    createMeshRenderer("plane", &plane);
+    
     //test ecs entity
     EntityID vikingRoom0 = newEntity(&state->scene);
     EntityID cube = newEntity(&state->scene);
@@ -74,6 +75,41 @@ void start(GameState* state){
     ADD_COMPONENT(&state->scene, cube, MeshRenderer, &plane);
 }
 
+void updateCamController(GameState* state){
+    Camera* cam = &state->camera;
+    static f32 moveSpeed = 5.f, rotateSpeed = 15.f;
+    if(is_key_pressed(&state->inputer, KEY_A)){
+        cam->transform.position.x-=moveSpeed*state->clock.deltaTime;
+    }
+    if(is_key_pressed(&state->inputer, KEY_D)){
+        cam->transform.position.x+=moveSpeed*state->clock.deltaTime;
+    }
+    if(is_key_pressed(&state->inputer, KEY_W)){
+        cam->transform.position.z+=moveSpeed*state->clock.deltaTime;
+    }
+    if(is_key_pressed(&state->inputer, KEY_S)){
+        cam->transform.position.z-=moveSpeed*state->clock.deltaTime;
+    }
+    if(is_key_pressed(&state->inputer, KEY_Q)){
+        cam->transform.position.y+=moveSpeed*state->clock.deltaTime;
+    }
+    if(is_key_pressed(&state->inputer, KEY_E)){
+        cam->transform.position.y-=moveSpeed*state->clock.deltaTime;
+    }
+    if(is_key_pressed(&state->inputer, KEY_UP)){
+        cam->transform.rotation.x-=rotateSpeed*state->clock.deltaTime;
+    }
+    if(is_key_pressed(&state->inputer, KEY_DOWN)){
+        cam->transform.rotation.x+=rotateSpeed*state->clock.deltaTime;
+    }
+    if(is_key_pressed(&state->inputer, KEY_RIGHT)){
+        cam->transform.rotation.y+=rotateSpeed*state->clock.deltaTime;
+    }
+    if(is_key_pressed(&state->inputer, KEY_LEFT)){
+        cam->transform.rotation.y-=rotateSpeed*state->clock.deltaTime;
+    }
+}
+
 static void update(GameState* state){
     if(is_key_down(&state->inputer, KEY_O)){
         state->camera.useOrthographic=!state->camera.useOrthographic;
@@ -82,6 +118,8 @@ static void update(GameState* state){
     if(is_key_down(&state->inputer, KEY_C)){
         LOG_DEBUG("camera rect : %.2f x %.2f", state->camera.viewRect.x,state->camera.viewRect.y);
     }
+
+    updateCamController(state);
 
     static f32 changeSpeed = .5;
     if(state->inputer.mouse.scrollDelta != 0){

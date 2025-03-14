@@ -3,11 +3,9 @@
 
 #include "renderer/render_types.h"
 
-void createTextureImage(VkPhysicalDevice gpu, VkDevice device, VkCommandPool cmdPool, VkQueue queue, u16* outMipLevels, VkImage* outTextureImage, VkDeviceMemory* outTextureMemory);
-void createTextureImageView(VkDevice device, VkImage textureImage, u16 mipLevels, VkImageView* outTextureImageView);
-void createTextureImageSampler(VkPhysicalDevice gpu, VkDevice device, u16 mipLevels, VkSampler* outTextureSampler);
-void destroyTextureImage(VkDevice device, VkImage textureImage, VkDeviceMemory textureImageMemory);
-void destroyTextureImageView(VkDevice device, VkImageView textureImageView);
-void destroyTextureSampler(VkDevice device, VkSampler sampler);
+void createTexture(void* pixels, Texture* out);
+void destroyTexture(Texture* tex);
 
+void createDefaultTextures(Material* default_material);
+void destroyDefaultTextures(Material* default_material);
 #endif //TEXTURE_H

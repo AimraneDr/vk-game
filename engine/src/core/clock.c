@@ -8,6 +8,7 @@ void clock_start(Clock* c){
     c->deltaTime = 0;
 }
 
+
 void clock_tick(Clock* c) {
     f64 currentTick = platform_get_time();
     c->deltaTime = currentTick - c->lastTick;

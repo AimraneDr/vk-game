@@ -20,4 +20,5 @@ typedef struct Clock_t{
 API void clock_start(Clock* c);
 API void clock_tick(Clock* c);
 API Time clock_get_system_time(void);
+
 #endif //CLOCK_H

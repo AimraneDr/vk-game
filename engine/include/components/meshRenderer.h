@@ -7,19 +7,15 @@
 #include "assets/asset_types.h"
 #include "ecs/ecs_types.h"
 
+#include <math/mathTypes.h>
+
 typedef struct MeshRenderer_Component_t{
-    struct {
-        VkBuffer vertexBuffer;
-        VkDeviceMemory vertexBufferMemory;
-    
-        VkBuffer indexBuffer;
-        VkDeviceMemory indexBufferMemory;
-    }renderContext;
-    
-    u32 indicesCount;
+    //TODO: change to a ref to material (owned by assets manager)
+    Material material;
+    void* data;
 }MeshRenderer;
 
 
-API void createMeshRenderer(Model* model, Renderer* renderer, MeshRenderer* out);
-API void destroyMeshRenderer(Renderer* renderer, MeshRenderer* meshRenderer);
+API void createMeshRenderer(const char* asset_name, MeshRenderer* out);
+API void destroyMeshRenderer(MeshRenderer* mesh);
 #endif //MESH_RENDERER_COMPONENT_H

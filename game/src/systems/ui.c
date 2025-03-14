@@ -94,7 +94,7 @@ void start(void* _state,  void* gState){
     ADD_COMPONENT(scene, container1, Transform2D, &containerTransform);
     ecs_add_child(scene, container, container1);
     
-    ADD_COMPONENT(scene, container0, CharacterController, &controller);
+    // ADD_COMPONENT(scene, container0, CharacterController, &controller);
 }
 
 static void update_entity(void* _state,  void* gState, EntityID entity){
