@@ -31,7 +31,7 @@ void ecs_register_component(Scene *scene, const char* name, u16 size)
 
 ComponentType ecs_get_component_type(Scene* scene, const char* name) {
     for (u8 i = 0; i < scene->componentTypesCount; i++) {
-        if (str_compare_val(scene->componentNames[i], name) == 0) {
+        if (str_equals_val(scene->componentNames[i], name)) {
             return (u64)1 << i;
         }
     }

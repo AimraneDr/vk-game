@@ -9,7 +9,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
-Asset load_texture(const char* path){
+Asset load_texture(const char* path, u32 index){
     i32 texWidth, texHeight, texChannels;
     // name = "./../resources/textures/viking_room.png";
     stbi_uc* pixels = stbi_load(path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
@@ -19,13 +19,14 @@ Asset load_texture(const char* path){
     }
         
     Texture* tex = memsys_alloc(sizeof(Texture), MEM_TYPE_TEXTURE);
+    tex->Idx = index;
     tex->width = texWidth;
     tex->height = texHeight;
     tex->mipLevels = (u16)FLOOR(log2(MAX(texWidth, texHeight))) + 1;
-
+    
     createTexture(pixels, tex);
     stbi_image_free(pixels);
- 
+    
     Asset new = {0};
     new.data = tex;
     new.ref_count = 0;

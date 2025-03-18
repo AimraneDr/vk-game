@@ -42,12 +42,12 @@ typedef struct PipelineConfig
 
 typedef struct Texture_t
 {
+    u32 Idx;
     VkImage image;
     VkDeviceMemory memory;
     VkImageView imageView;
     VkSampler sampler;
     u32 width, height;
-    u8 ref_count;
     u16 mipLevels;
 } Texture;
 
@@ -55,6 +55,7 @@ typedef struct Texture_t
 typedef struct Material_t
 {
     // --- Textures ---
+
     Texture* albedo;     // Base color (sRGB)
     Texture* normal;     // Normal map (RGBA)
     Texture* metalRoughAO; // Metallic (R), Roughness (G), AO (B)
@@ -62,19 +63,21 @@ typedef struct Material_t
     Texture* height;     // Height (R)
 
     // --- Material Factors (GPU UBO) ---
+
     Vec4 albedoFactor;
-    Vec3 emissiveFactor;
+    Vec4 emissiveFactor;
     float metallicFactor;
     float roughnessFactor;
     float aoFactor;
     float heightScale;
 
     // --- UV Transform ---
+    
     Vec2 uvTiling; // Texture repeat (e.g., [2,2])
     Vec2 uvOffset; // Texture offset (e.g., [0.5,0.5])
     // --- Descriptor Set ---
-
-    VkDescriptorSet descriptorSet;
+    //set per frame in flight
+    VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
 } Material;
 
 typedef struct Pipeline_t
@@ -89,12 +92,17 @@ typedef struct Pipeline_t
     {
         struct
         {
+            VkDescriptorPool pool;
+            VkDescriptorSetLayout setLayout;
             VkBuffer buffers[MAX_FRAMES_IN_FLIGHT];
             VkDeviceMemory buffersMemory[MAX_FRAMES_IN_FLIGHT];
             void *buffersMapped[MAX_FRAMES_IN_FLIGHT];
+            VkDescriptorSet sets[MAX_FRAMES_IN_FLIGHT];
         } global;
         struct
         {
+            VkDescriptorPool pool;
+            VkDescriptorSetLayout setLayout;
             VkBuffer buffers[MAX_FRAMES_IN_FLIGHT];
             VkDeviceMemory buffersMemory[MAX_FRAMES_IN_FLIGHT];
             void *buffersMapped[MAX_FRAMES_IN_FLIGHT];
@@ -204,14 +212,21 @@ typedef struct PBR_GLOBAL_UBO_t
 
 typedef struct PBR_Material_UBO_t
 {
+    u32 albedo_idx;
+    u32 normal_idx;
+    u32 metalRoughAO_idx;
+    u32 emissive_idx;
+    u32 height_idx;
+
     f32 metallicFactor;
     f32 roughnessFactor;
     f32 aoFactor;
     f32 heightScale;
+
     Vec2 uvTiling;
     Vec2 uvOffset;
     Vec4 albedoFactor;
-    Vec3 emissiveFactor;
+    Vec4 emissiveFactor;
 } PBR_Material_UBO;
 
 typedef struct PBR_PushConstant_t

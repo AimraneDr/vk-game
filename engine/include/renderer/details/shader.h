@@ -4,6 +4,6 @@
 #include "renderer/render_types.h"
 #include "core/files.h"
 
-VkShaderModule createShaderModule(VkDevice device, File* code);
+VkShaderModule createShaderModule(VkDevice device, FileHandle* code);
 void destroyShaderModule(VkDevice device, VkShaderModule shaderModule);
 #endif //SHADER_H

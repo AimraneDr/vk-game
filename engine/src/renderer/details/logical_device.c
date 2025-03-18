@@ -9,8 +9,19 @@
 void createLogicalDevice(const VkPhysicalDevice device, const VkSurfaceKHR surface, VkDevice* out_device, VkQueue* out_graphics_queue, VkQueue* out_present_queue){
     QueueFamilyIndices indices = findQueueFamilies(device, surface);
 
+    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
+        .descriptorBindingPartiallyBound = VK_TRUE,
+        .runtimeDescriptorArray = VK_TRUE,
+        .shaderSampledImageArrayNonUniformIndexing = VK_TRUE
+    };
+    VkPhysicalDeviceFeatures2 features2 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = &indexingFeatures
+    };
+    vkGetPhysicalDeviceFeatures2(device, &features2);
+    
     VkDeviceQueueCreateInfo* queueCreateInfos = (VkDeviceQueueCreateInfo*)malloc(sizeof(VkDeviceQueueCreateInfo) * indices.familiesCount);
-
     for(u32 i=0; i < indices.familiesCount; i++){
         f32 queuePriority = 1.0f;
         VkDeviceQueueCreateInfo queueCreateInfo = {
@@ -24,7 +35,7 @@ void createLogicalDevice(const VkPhysicalDevice device, const VkSurfaceKHR surfa
 
     VkPhysicalDeviceFeatures enabledFeatures = {
         .samplerAnisotropy = VK_TRUE,
-        .sampleRateShading = VK_TRUE,
+        .sampleRateShading = VK_TRUE
     };
 
     VkDeviceCreateInfo createInfo = {
@@ -33,9 +44,11 @@ void createLogicalDevice(const VkPhysicalDevice device, const VkSurfaceKHR surfa
         .queueCreateInfoCount = indices.familiesCount,
         .pEnabledFeatures = &enabledFeatures,
         .enabledExtensionCount = deviceExtensionsCount(),
-        .ppEnabledExtensionNames = (const char* const*)deviceExtensionsNames()
+        .ppEnabledExtensionNames = (const char* const*)deviceExtensionsNames(),
+        .pNext = &indexingFeatures
     };
-    
+
+
     if(isValidationLayersEnabled()){
         createInfo.enabledLayerCount = validationLayersCount();
         createInfo.ppEnabledLayerNames = (const char* const*)validationLayersNames();

@@ -45,10 +45,10 @@ void start(void* _state,  void* gState){
     Renderer* r = &((GameState*)gState)->renderer;
     Scene* scene = &((GameState*)gState)->scene;
 
-    CharacterController controller = {
-        .MoveSpped = 5.f,
-        .RotateSpeed = 45.f
-    };
+    // CharacterController controller = {
+    //     .MoveSpped = 5.f,
+    //     .RotateSpeed = 45.f
+    // };
     Transform2D containerTransform = {
         .position = vec2_new(0.f, .5f),
         .scale = vec2_new(1.f, 1.f),

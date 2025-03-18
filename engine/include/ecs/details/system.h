@@ -10,13 +10,18 @@ API void ecs_register_system_to_group(Scene* s, System *sys, SystemGroup group);
 
 //runtime invokes
 API void ecs_systems_initialize(GameState* gState);
+API void ecs_systems_pre_update(GameState* gState);
 API void ecs_systems_update(GameState* gState);
+API void ecs_systems_post_update(GameState* gState);
 API void ecs_systems_shutdown(GameState* gState);
 
 /// @brief runs at the start of entity's life
-API void ecs_systems_start_entity(GameState* gState, EntityID entity);
+void ecs_systems_start_entity(GameState* gState, EntityID entity);
+
 API void ecs_systems_start_group(GameState* gState, SystemGroup group);
+API void ecs_systems_pre_update_group(GameState *gState, SystemGroup group);
 API void ecs_systems_update_group(GameState* gState, SystemGroup group);
+API void ecs_systems_post_update_group(GameState *gState, SystemGroup group);
 API void ecs_systems_destroy_group(GameState* gState, SystemGroup group);
 
 #endif //ECS_SYSTEM_H

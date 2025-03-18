@@ -4,6 +4,7 @@
 #include "components/meshRenderer.h"
 #include "components/Hierarchy.h"
 #include "core/debugger.h"
+#include "assets/asset_manager.h"
 
 #include "renderer/render_types.h"
 #include "renderer/details/pipeline.h"
@@ -18,6 +19,8 @@
 #include <math/vec4.h>
 #include <math/trigonometry.h>
 
+#include <collections/DynamicArray.h>
+
 #include "ecs/ecs.h"
 #include "game.h"
 
@@ -28,6 +31,8 @@ typedef struct PBR_renderer_InternalState_t{
 
 
 static void start(void* _state, void* gState);
+static void pre_update(void* _state, void* gState);
+static void pre_update_entity(void* _state, void* gState, EntityID e);
 static void update(void* _state, void* gState);
 static void update_entity(void* _state, void* gState, EntityID e);
 static void destroy(void* _state, void* gState);
@@ -38,8 +43,11 @@ void _getVertexInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeD
 
 void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out);
 void createDescriptorPool(VkDevice device, VkDescriptorPool* out);
-void createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDescriptorPool pool, VkBuffer* globalUBOs, VkBuffer* elementUBOs, Material* mat, VkDescriptorSet* outDescriptorSets);
+void updateUBOsDescriptorSets(VkDevice device, VkBuffer* globalUBOs, VkBuffer* elementUBOs, VkDeviceSize elementAlignmentSize, VkDescriptorSet* outDescriptorSets);
+void createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDescriptorPool pool, VkDescriptorSet* outDescriptorSets);
 void updateGlobalUniformBuffer(uint32_t currentImage, void** uniformBuffersMapped, f64 deltatime, Camera* camera);
+void updateElementUniformBuffer(void* uniformBufferMapped, Material* mtl, u32 alignIndex, VkDeviceSize alignedUboSize);
+void uploadMaterialTextures(VkDevice device, VkDescriptorSet* descriptorSet, Material* mtl);
 
 System PBR_renderer_get_system_ref(Scene* scene, Renderer* r, Camera* camera){
     PBR_renderer_InternalState* s = malloc(sizeof(PBR_renderer_InternalState));
@@ -48,6 +56,8 @@ System PBR_renderer_get_system_ref(Scene* scene, Renderer* r, Camera* camera){
     return (System){
         .Signature = ecs_get_component_type(scene, "MeshRenderer") | ecs_get_component_type(scene, "Transform"),
         .start = start,
+        .preUpdate = pre_update,
+        .preUpdateEntity = pre_update_entity,
         .update = update,
         .updateEntity = update_entity,
         .destroy = destroy,
@@ -94,21 +104,35 @@ void start(void* _state, void* gState){
         &state->graphicsPipeline.ref
     );
     createUniformBuffers(r->context->gpu, r->context->device, sizeof(PBR_GLOBAL_UBO), state->graphicsPipeline.uniform.global.buffers, state->graphicsPipeline.uniform.global.buffersMemory, state->graphicsPipeline.uniform.global.buffersMapped);
-    createUniformBuffers(r->context->gpu, r->context->device, sizeof(PBR_Material_UBO), state->graphicsPipeline.uniform.element.buffers, state->graphicsPipeline.uniform.element.buffersMemory, state->graphicsPipeline.uniform.element.buffersMapped);
+    createDynamicOffsetUniformBuffers(r->context->gpu, r->context->device, sizeof(PBR_Material_UBO), state->graphicsPipeline.uniform.element.buffers, state->graphicsPipeline.uniform.element.buffersMemory, state->graphicsPipeline.uniform.element.buffersMapped, &state->graphicsPipeline.uniform.element.alignedUboSize);
 
     createDefaultTextures(&state->graphicsPipeline.defaultMaterial);
 
     createDescriptorPool(r->context->device, &state->graphicsPipeline.descriptorPool);
-    createDescriptorSets(r->context->device, state->graphicsPipeline.descriptorSetLayout, state->graphicsPipeline.descriptorPool, state->graphicsPipeline.uniform.global.buffers, state->graphicsPipeline.uniform.element.buffers, &state->graphicsPipeline.defaultMaterial, state->graphicsPipeline.descriptorSets);
+    createDescriptorSets(r->context->device, state->graphicsPipeline.descriptorSetLayout, state->graphicsPipeline.descriptorPool, state->graphicsPipeline.descriptorSets);
+    updateUBOsDescriptorSets(r->context->device, state->graphicsPipeline.uniform.global.buffers, state->graphicsPipeline.uniform.element.buffers, state->graphicsPipeline.uniform.element.alignedUboSize, state->graphicsPipeline.descriptorSets);
 }
 
+static void pre_update(void* _state, void* gState){
+    
+}
+
+static void pre_update_entity(void* _state, void* gState, EntityID e){
+    PBR_renderer_InternalState* state = _state;
+    Renderer* r = &((GameState*)gState)->renderer;
+    Scene* scene = &((GameState*)gState)->scene;
+
+    MeshRenderer* m = GET_COMPONENT(scene, e, MeshRenderer);
+    uploadMaterialTextures(r->context->device, state->graphicsPipeline.descriptorSets, m->material);
+}
+
+static u32 elementCounter;
 void update(void* _state, void* gState){
     PBR_renderer_InternalState* state = _state;
     Renderer* r = &((GameState*)gState)->renderer;
     Camera* cam = &((GameState*)gState)->camera;
     f32 dt =  ((GameState*)gState)->clock.deltaTime;
     
- 
     updateGlobalUniformBuffer(r->currentFrame, state->graphicsPipeline.uniform.global.buffersMapped, dt, cam);
 
     PBR_Material_UBO m_ubo = {0};
@@ -117,7 +141,8 @@ void update(void* _state, void* gState){
     memcpy(state->graphicsPipeline.uniform.element.buffersMapped[r->currentFrame], &m_ubo, sizeof(m_ubo));
 
     vkCmdBindPipeline(r->context->commandBuffers[r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->graphicsPipeline.ref);
-    vkCmdBindDescriptorSets(r->context->commandBuffers[r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->graphicsPipeline.pipelineLayout, 0, 1, state->graphicsPipeline.descriptorSets, 0, 0);
+    vkCmdBindDescriptorSets(r->context->commandBuffers[r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->graphicsPipeline.pipelineLayout, 0, 1, &state->graphicsPipeline.descriptorSets[r->currentFrame], 1, (u32[]){0});    
+    elementCounter=0;
 }
 
 void update_entity(void* _state, void* gState, EntityID e){
@@ -134,6 +159,7 @@ void update_entity(void* _state, void* gState, EntityID e){
     if(h && h->parent != INVALID_ENTITY) parentT = GET_COMPONENT(scene, h->parent, Transform);
     transform_update(t, parentT? &parentT->__local_mat : 0);
 
+     
     PBR_PushConstant pc = {
             .model = t->mat
     };
@@ -147,6 +173,12 @@ void update_entity(void* _state, void* gState, EntityID e){
         sizeof(PBR_PushConstant),
         &pc
     );
+    u32 dynamicOffset = elementCounter * state->graphicsPipeline.uniform.element.alignedUboSize;
+    
+    vkCmdBindDescriptorSets(r->context->commandBuffers[r->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, state->graphicsPipeline.pipelineLayout, 0, 1, &state->graphicsPipeline.descriptorSets[r->currentFrame], 1, &dynamicOffset);
+    
+    updateElementUniformBuffer(state->graphicsPipeline.uniform.element.buffersMapped[r->currentFrame], m->material ,elementCounter++, state->graphicsPipeline.uniform.element.alignedUboSize);
+    
     vkCmdBindVertexBuffers(r->context->commandBuffers[r->currentFrame], 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(r->context->commandBuffers[r->currentFrame], mData->indexBuffer,0, VK_INDEX_TYPE_UINT32);
     vkCmdDrawIndexed(r->context->commandBuffers[r->currentFrame], mData->indicesCount, 1, 0, 0, 0);
@@ -175,7 +207,34 @@ void destroy_entity(void* _state, void* gState, EntityID e){
 /////      INTERNAL     ///////
 ///////////////////////////////
 ///////////////////////////////
-#define bindingsCount 7
+#define samplersCount 1000
+#define bindingsCount 3
+
+void addTextureToDescriptorSet(
+    VkDevice device,
+    VkDescriptorSet* descriptorSet,
+    Texture* texture
+) {
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        VkDescriptorImageInfo imageInfo = {
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            .imageView = texture->imageView,
+            .sampler = texture->sampler
+        };
+
+        VkWriteDescriptorSet write = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = descriptorSet[i],
+            .dstBinding = 2,
+            .dstArrayElement = texture->Idx,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &imageInfo
+        };
+
+        vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+    }
+}
 
 void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out){
     VkDescriptorSetLayoutBinding uboLayoutBinding = {
@@ -187,43 +246,15 @@ void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out){
     };
     VkDescriptorSetLayoutBinding materialUboLayoutBinding = {
         .binding = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         .pImmutableSamplers = 0
     };
-    VkDescriptorSetLayoutBinding albidoSamplerLayoutBinding = {
+    VkDescriptorSetLayoutBinding samplersLayoutBinding = {
         .binding = 2,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1,
-        .pImmutableSamplers = 0,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-    };
-    VkDescriptorSetLayoutBinding normalSamplerLayoutBinding = {
-        .binding = 3,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1,
-        .pImmutableSamplers = 0,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-    };
-    VkDescriptorSetLayoutBinding metalRoughAmbOclSamplerLayoutBinding = {
-        .binding = 4,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1,
-        .pImmutableSamplers = 0,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-    };
-    VkDescriptorSetLayoutBinding emmissionSamplerLayoutBinding = {
-        .binding = 5,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1,
-        .pImmutableSamplers = 0,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-    };
-    VkDescriptorSetLayoutBinding heightSamplerLayoutBinding = {
-        .binding = 6,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1,
+        .descriptorCount = samplersCount,
         .pImmutableSamplers = 0,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
     };
@@ -231,17 +262,14 @@ void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out){
     VkDescriptorSetLayoutBinding bindings[bindingsCount] = {
         uboLayoutBinding,
         materialUboLayoutBinding, 
-        albidoSamplerLayoutBinding,
-        normalSamplerLayoutBinding,
-        metalRoughAmbOclSamplerLayoutBinding,
-        emmissionSamplerLayoutBinding,
-        heightSamplerLayoutBinding
+        samplersLayoutBinding
     };
 
     VkDescriptorSetLayoutCreateInfo layoutInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .bindingCount = bindingsCount,
-        .pBindings = bindings
+        .pBindings = bindings,
+        .flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT
     };
 
     VkResult res = vkCreateDescriptorSetLayout(device, &layoutInfo, 0, out);
@@ -260,33 +288,13 @@ void createDescriptorPool(VkDevice device, VkDescriptorPool* out){
         },
         // material ubo
         {
-            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
             .descriptorCount = MAX_FRAMES_IN_FLIGHT
         },
-        // albido 
+        // samplers
         {
             .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = MAX_FRAMES_IN_FLIGHT
-        },
-        // norma;
-        {
-            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = MAX_FRAMES_IN_FLIGHT
-        },
-        // metalic-roughness-ambientOclusion
-        {
-            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = MAX_FRAMES_IN_FLIGHT
-        },
-        // emission
-        {
-            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = MAX_FRAMES_IN_FLIGHT
-        },
-        // height
-        {
-            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = MAX_FRAMES_IN_FLIGHT
+            .descriptorCount = samplersCount * MAX_FRAMES_IN_FLIGHT
         }
     };
 
@@ -294,7 +302,8 @@ void createDescriptorPool(VkDevice device, VkDescriptorPool* out){
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .poolSizeCount = bindingsCount,
         .pPoolSizes = poolSizes,
-        .maxSets = MAX_FRAMES_IN_FLIGHT
+        .maxSets = MAX_FRAMES_IN_FLIGHT,
+        .flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT
     };
 
     VkResult res = vkCreateDescriptorPool(device, &poolInfo, 0, out);
@@ -303,8 +312,42 @@ void createDescriptorPool(VkDevice device, VkDescriptorPool* out){
     }
 }
 
+void updateUBOsDescriptorSets(VkDevice device, VkBuffer* globalUBOs, VkBuffer* elementUBOs, VkDeviceSize elementAlignmentSize, VkDescriptorSet* outDescriptorSets){
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        VkDescriptorBufferInfo globalBuffInfo = {
+            .buffer = globalUBOs[i],
+            .offset = 0,
+            .range = sizeof(PBR_GLOBAL_UBO)
+        };
+        VkDescriptorBufferInfo materialBuffInfo = {
+            .buffer = elementUBOs[i],
+            .offset = 0,
+            .range = elementAlignmentSize //sizeof(PBR_Material_UBO)
+        };
+        VkWriteDescriptorSet descriptorWrites[2] = {};
+        descriptorWrites[0] = (VkWriteDescriptorSet){
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = outDescriptorSets[i],
+            .dstBinding = 0,
+            .dstArrayElement = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .pBufferInfo = &globalBuffInfo
+        };
+        descriptorWrites[1] = (VkWriteDescriptorSet){
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = outDescriptorSets[i],
+            .dstBinding = 1,
+            .dstArrayElement = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            .descriptorCount = 1,
+            .pBufferInfo = &materialBuffInfo
+        };
 
-void createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDescriptorPool pool, VkBuffer* globalUBOs, VkBuffer* elementUBOs, Material* mat, VkDescriptorSet* outDescriptorSets){
+        vkUpdateDescriptorSets(device, 2, descriptorWrites, 0, 0);
+    }
+}
+void createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDescriptorPool pool, VkDescriptorSet* outDescriptorSets){
     VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT];
     for(u8 i=0; i<MAX_FRAMES_IN_FLIGHT; i++){
         layouts[i] = setLayout;
@@ -322,110 +365,8 @@ void createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDe
         LOG_FATAL("failed to allocate descriptor sets!");
     }
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        VkDescriptorBufferInfo globalBuffInfo = {
-            .buffer = globalUBOs[i],
-            .offset = 0,
-            .range = sizeof(PBR_GLOBAL_UBO)
-        };
-        VkDescriptorBufferInfo materialBuffInfo = {
-            .buffer = elementUBOs[i],
-            .offset = 0,
-            .range = sizeof(PBR_Material_UBO)
-        };
-        VkDescriptorImageInfo albidoImageInfo = {
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            .imageView = mat->albedo->imageView,
-            .sampler = mat->albedo->sampler
-        };
-        VkDescriptorImageInfo normalImageInfo = {
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            .imageView = mat->normal->imageView,
-            .sampler = mat->normal->sampler
-        };
-        VkDescriptorImageInfo metalRoughAOImageInfo = {
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            .imageView = mat->metalRoughAO->imageView,
-            .sampler = mat->metalRoughAO->sampler
-        };
-        VkDescriptorImageInfo emissionImageInfo = {
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            .imageView = mat->emissive->imageView,
-            .sampler = mat->emissive->sampler
-        };
-        VkDescriptorImageInfo heightImageInfo = {
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            .imageView = mat->height->imageView,
-            .sampler = mat->height->sampler
-        };
-        VkWriteDescriptorSet descriptorWrites[bindingsCount] = {};
-        descriptorWrites[0] = (VkWriteDescriptorSet){
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = outDescriptorSets[i],
-            .dstBinding = 0,
-            .dstArrayElement = 0,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .pBufferInfo = &globalBuffInfo
-        };
-        descriptorWrites[1] = (VkWriteDescriptorSet){
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = outDescriptorSets[i],
-            .dstBinding = 1,
-            .dstArrayElement = 0,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .pBufferInfo = &materialBuffInfo
-        };
-        descriptorWrites[2] = (VkWriteDescriptorSet){
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = outDescriptorSets[i],
-            .dstBinding = 2,
-            .dstArrayElement = 0,
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = 1,
-            .pImageInfo = &albidoImageInfo
-        };
-        descriptorWrites[3] = (VkWriteDescriptorSet){
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = outDescriptorSets[i],
-            .dstBinding = 3,
-            .dstArrayElement = 0,
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = 1,
-            .pImageInfo = &normalImageInfo
-        };
-        descriptorWrites[4] = (VkWriteDescriptorSet){
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = outDescriptorSets[i],
-            .dstBinding = 4,
-            .dstArrayElement = 0,
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = 1,
-            .pImageInfo = &metalRoughAOImageInfo
-        };
-        descriptorWrites[5] = (VkWriteDescriptorSet){
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = outDescriptorSets[i],
-            .dstBinding = 5,
-            .dstArrayElement = 0,
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = 1,
-            .pImageInfo = &emissionImageInfo
-        };
-        descriptorWrites[6] = (VkWriteDescriptorSet){
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = outDescriptorSets[i],
-            .dstBinding = 6,
-            .dstArrayElement = 0,
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = 1,
-            .pImageInfo = &heightImageInfo
-        };
-
-        vkUpdateDescriptorSets(device, bindingsCount, descriptorWrites, 0, 0);
-    }
 }
+
 
 void updateGlobalUniformBuffer(uint32_t currentImage, void** uniformBuffersMapped, f64 deltatime, Camera* camera) {
 
@@ -437,6 +378,55 @@ void updateGlobalUniformBuffer(uint32_t currentImage, void** uniformBuffersMappe
     ubo.proj = camera->projection;
 
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+}
+
+//TODO: temp
+static bool loaded[samplersCount] = {0};
+void uploadMaterialTextures(VkDevice device, VkDescriptorSet* descriptorSet, Material* mtl) {
+    //upload material textures if not uploaded already
+    if(!loaded[mtl->albedo->Idx]){
+        addTextureToDescriptorSet(device, descriptorSet, mtl->albedo);
+        loaded[mtl->albedo->Idx] = true;
+    }
+    if(!loaded[mtl->normal->Idx]){
+        addTextureToDescriptorSet(device, descriptorSet, mtl->normal);
+        loaded[mtl->normal->Idx] = true;
+    }
+    if(!loaded[mtl->metalRoughAO->Idx]){
+        addTextureToDescriptorSet(device, descriptorSet, mtl->metalRoughAO);
+        loaded[mtl->metalRoughAO->Idx] = true;
+    }
+    if(!loaded[mtl->emissive->Idx]){
+        addTextureToDescriptorSet(device, descriptorSet, mtl->emissive);
+        loaded[mtl->emissive->Idx] = true;
+    }
+    if(!loaded[mtl->height->Idx]){
+        addTextureToDescriptorSet(device, descriptorSet, mtl->height);
+        loaded[mtl->height->Idx] = true;
+    }
+}
+
+void updateElementUniformBuffer(void* uniformBufferMapped, Material* mtl, u32 alignIndex, VkDeviceSize alignedUboSize) {
+    
+    PBR_Material_UBO ubo = {
+        .albedo_idx = mtl->albedo->Idx,
+        .normal_idx = mtl->normal->Idx,
+        .metalRoughAO_idx = mtl->metalRoughAO->Idx,
+        .emissive_idx = mtl->emissive->Idx,
+        .height_idx = mtl->height->Idx,
+
+        .albedoFactor = mtl->albedoFactor,
+        .aoFactor = mtl->aoFactor,
+        .emissiveFactor = mtl->emissiveFactor,
+        .metallicFactor = mtl->metallicFactor,
+        .heightScale = mtl->heightScale,
+        .roughnessFactor = mtl->roughnessFactor,
+        .uvOffset = mtl->uvOffset,
+        .uvTiling = mtl->uvTiling
+    };
+
+    VkDeviceSize offset = alignIndex * alignedUboSize;
+    memcpy((void*)uniformBufferMapped+offset, &ubo, sizeof(ubo));
 }
 
 VkVertexInputBindingDescription _getVertexInputBindingDescription(){

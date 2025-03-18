@@ -114,8 +114,12 @@ void renderer_draw(GameState* gState)
     vkResetFences(r->context->device, 1, &r->sync.inFlightFences[r->currentFrame]);
     vkResetCommandBuffer(r->context->commandBuffers[r->currentFrame], 0);
 
+    ecs_systems_pre_update_group(gState, SYSTEM_GROUP_RENDERING);
+    
     recordCommandBuffer(gState, imageIndex);
 
+    ecs_systems_post_update_group(gState, SYSTEM_GROUP_RENDERING);
+    
     VkSemaphore waitSemaphores[] = {r->sync.imageAvailableSemaphores[r->currentFrame]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     VkSemaphore signalSemaphores[] = {r->sync.renderFinishedSemaphores[r->currentFrame]};

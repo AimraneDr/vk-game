@@ -19,8 +19,8 @@ void create_graphics_pipeline(
     VkPipeline* out_pipeline)
 {
     // Load shader files
-    File* vert_code = readFile(vert_shader);
-    File* frag_code = readFile(frag_shader);
+    FileHandle* vert_code = file_load(vert_shader);
+    FileHandle* frag_code = file_load(frag_shader);
     if (!vert_code || !frag_code) {
         LOG_ERROR("Failed to load shader files");
         return;
@@ -30,8 +30,8 @@ void create_graphics_pipeline(
     VkShaderModule vert_module = createShaderModule(device, vert_code);
     VkShaderModule frag_module = createShaderModule(device, frag_code);
     if (!vert_module || !frag_module) {
-        freeFile(vert_code);
-        freeFile(frag_code);
+        file_unload(vert_code);
+        file_unload(frag_code);
         return;
     }
 
@@ -199,8 +199,8 @@ cleanup:
     free(attr_descs);
     vkDestroyShaderModule(device, vert_module, NULL);
     vkDestroyShaderModule(device, frag_module, NULL);
-    freeFile(vert_code);
-    freeFile(frag_code);
+    file_unload(vert_code);
+    file_unload(frag_code);
 }
 
 
@@ -211,8 +211,8 @@ void createPipeline(
     VkRenderPass renderpass, VkDescriptorSetLayout descriptorSetLayout, 
     VkPipelineLayout* out_layout, VkPipeline* out_pipeline)
 {
-    File* vertCode = readFile(vertshadername);
-    File* fragCode = readFile(fragshadername);
+    FileHandle* vertCode = file_load(vertshadername);
+    FileHandle* fragCode = file_load(fragshadername);
     VkShaderModule vertShaderModule = createShaderModule(device, vertCode);
     VkShaderModule fragShaderModule = createShaderModule(device, fragCode);
 
@@ -385,8 +385,8 @@ void createPipeline(
     //cleanup
     destroyShaderModule(device, vertShaderModule);
     destroyShaderModule(device, fragShaderModule);
-    freeFile(vertCode);
-    freeFile(fragCode);
+    file_unload(vertCode);
+    file_unload(fragCode);
     free(vertexAttribDescs);
 }
 
@@ -398,8 +398,8 @@ void UI_createPipeline(
     VkRenderPass renderpass, VkDescriptorSetLayout descriptorSetLayout, 
     VkPipelineLayout* out_layout, VkPipeline* out_pipeline)
 {
-    File* vertCode = readFile(vertshadername);
-    File* fragCode = readFile(fragshadername);
+    FileHandle* vertCode = file_load(vertshadername);
+    FileHandle* fragCode = file_load(fragshadername);
     VkShaderModule vertShaderModule = createShaderModule(device, vertCode);
     VkShaderModule fragShaderModule = createShaderModule(device, fragCode);
 
@@ -572,8 +572,8 @@ void UI_createPipeline(
     //cleanup
     destroyShaderModule(device, vertShaderModule);
     destroyShaderModule(device, fragShaderModule);
-    freeFile(vertCode);
-    freeFile(fragCode);
+    file_unload(vertCode);
+    file_unload(fragCode);
     free(vertexAttribDescs);
 }
 

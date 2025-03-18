@@ -1,9 +1,10 @@
 #include "renderer/details/details.h"
 #include "renderer/render_types.h"
 
-#define DeviceExtensionsCount 1
+#define DeviceExtensionsCount 2
 const char* DeviceExtensionsNames[DeviceExtensionsCount] = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME 
 };
 
 #ifdef _DEBUG

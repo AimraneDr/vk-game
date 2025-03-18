@@ -11,7 +11,7 @@
 
 typedef struct MeshRenderer_Component_t{
     //TODO: change to a ref to material (owned by assets manager)
-    Material material;
+    Material* material;
     void* data;
 }MeshRenderer;
 

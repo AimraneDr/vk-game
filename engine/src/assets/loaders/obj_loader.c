@@ -10,7 +10,7 @@
 #include "renderer/meshData.h"
 #include "core/memsys.h"
 
-
+//TODO: write my own loader to reduce dependency and to remove compiler warning 
 #define TINYOBJ_LOADER_C_IMPLEMENTATION
 #include <TinyObjLoader/tiny_obj_loader_c.h>
 
@@ -100,7 +100,7 @@ static u32 hashmap_find_or_insert(HashMap* map, const Vertex* vertex, u32 next_i
 // Callback to read file contents into buf
 static void obj_file_reader(void* ctx, const char* filename, int is_mtl, 
                           const char* obj_filename, char** buf, size_t* len) {
-    File* file = readFile(filename);
+    FileHandle* file = file_load(filename);
     if (!file || !file->content) {
         *buf = NULL;
         *len = 0;

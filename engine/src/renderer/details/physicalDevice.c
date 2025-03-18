@@ -7,7 +7,7 @@
 
 bool evaluatePhysicalDevice(const VkPhysicalDevice device, const VkSurfaceKHR surface);
 
-void selectPhysicalDevice(const VkInstance instance, const VkSurfaceKHR surface, VkPhysicalDevice *out, VkSampleCountFlagBits* outMsaaSamples)
+void selectPhysicalDevice(const VkInstance instance, const VkSurfaceKHR surface, VkPhysicalDevice *out, VkSampleCountFlagBits *outMsaaSamples)
 {
     u32 devicesCount = 0;
     vkEnumeratePhysicalDevices(instance, &devicesCount, 0);
@@ -27,19 +27,24 @@ void selectPhysicalDevice(const VkInstance instance, const VkSurfaceKHR surface,
         if (evaluatePhysicalDevice(gpus[i], surface))
         {
             *out = gpus[i];
-            if(*outMsaaSamples == 0){
+            if (*outMsaaSamples == 0)
+            {
                 *outMsaaSamples = getMaxUsableSampleCount(gpus[i]);
-            }else{
-                if( *outMsaaSamples == 1) (*outMsaaSamples)++;
+            }
+            else
+            {
+                if (*outMsaaSamples == 1)
+                    (*outMsaaSamples)++;
                 VkSampleCountFlagBits max = getMaxUsableSampleCount(gpus[i]);
-                if(max < *outMsaaSamples)   *outMsaaSamples = max;
+                if (max < *outMsaaSamples)
+                    *outMsaaSamples = max;
             }
             break;
         }
     }
     free(gpus);
 
-    if (out == VK_NULL_HANDLE)
+    if (*out == VK_NULL_HANDLE)
     {
         LOG_FATAL("Physical device does not meet the minimum requirements.");
         return;
@@ -80,12 +85,14 @@ bool checkDeviceExtensionsSupport(VkPhysicalDevice device)
     return true;
 }
 
-
-u32 findMemoryType(VkPhysicalDevice gpu, u32 typeFilter, VkMemoryPropertyFlags properties){
+u32 findMemoryType(VkPhysicalDevice gpu, u32 typeFilter, VkMemoryPropertyFlags properties)
+{
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(gpu, &memProperties);
-    for (u32 i = 0; i < memProperties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+    for (u32 i = 0; i < memProperties.memoryTypeCount; i++)
+    {
+        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+        {
             return i;
         }
     }
@@ -93,58 +100,94 @@ u32 findMemoryType(VkPhysicalDevice gpu, u32 typeFilter, VkMemoryPropertyFlags p
     return -1;
 }
 
-
 /// @brief for now jsut return the first suitable device
 /// @param device
 /// @return
 bool evaluatePhysicalDevice(const VkPhysicalDevice device, const VkSurfaceKHR surface)
 {
-
+    // 1. Get core properties/features
     VkPhysicalDeviceProperties properties;
     VkPhysicalDeviceFeatures features;
     vkGetPhysicalDeviceProperties(device, &properties);
     vkGetPhysicalDeviceFeatures(device, &features);
 
-    bool suitable = true;
-    // device type
-    if (properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
-    {
-        suitable = false;
-    }
+    // 2. Check bindless support via descriptor indexing features
+    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES};
+    VkPhysicalDeviceFeatures2 deviceFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = &indexingFeatures};
+    vkGetPhysicalDeviceFeatures2(device, &deviceFeatures);
 
-    // support geometry shader
-    if (!features.geometryShader)
-        suitable = false;
+    // 3. Bindless requires these features
+    bool bindlessSupported =
+        indexingFeatures.descriptorBindingPartiallyBound &&
+        indexingFeatures.runtimeDescriptorArray &&
+        indexingFeatures.shaderSampledImageArrayNonUniformIndexing;
 
+    // 4. Check queue families
     QueueFamilyIndices indices = findQueueFamilies(device, surface);
-    if (indices.graphicsFamily == -1 || indices.computeFamily == -1)
-        suitable = false;
-
-    bool extensionsSuppoerted = checkDeviceExtensionsSupport(device);
-
-    bool swapChainAdequate = false;
-    if (extensionsSuppoerted)
+    bool queuesValid = true;
+    // Ensure this checks graphics + present
+    if (indices.graphicsFamily == -1 || indices.presentFamily == -1)
     {
-        SwapChainSupportDetails d = {};
-        querySwapChainSupport(device, surface, &d);
-        if (d.formatsCount > 0 && d.presentModesCount > 0)
-            swapChainAdequate = true;
-        freeSwapChainSupportDetails(&d);
+        queuesValid = false;
     }
-    return suitable && extensionsSuppoerted && swapChainAdequate && features.samplerAnisotropy;
+    // 5. Check extensions (including VK_EXT_descriptor_indexing if needed)
+    bool extensionsSupported = checkDeviceExtensionsSupport(device);
+
+    // 6. Swapchain support
+    bool swapchainAdequate = false;
+    if (extensionsSupported)
+    {
+        SwapChainSupportDetails swapchainSupport;
+        querySwapChainSupport(device, surface, &swapchainSupport);
+        swapchainAdequate =
+            swapchainSupport.formatsCount > 0 &&
+            swapchainSupport.presentModesCount > 0;
+        freeSwapChainSupportDetails(&swapchainSupport);
+    }
+
+    // 7. Final suitability
+    return (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
+            properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) &&
+           queuesValid &&
+           extensionsSupported &&
+           swapchainAdequate &&
+           features.samplerAnisotropy &&
+           bindlessSupported;
 }
 
-VkSampleCountFlagBits getMaxUsableSampleCount(VkPhysicalDevice gpu) {
+VkSampleCountFlagBits getMaxUsableSampleCount(VkPhysicalDevice gpu)
+{
     VkPhysicalDeviceProperties physicalDeviceProperties;
     vkGetPhysicalDeviceProperties(gpu, &physicalDeviceProperties);
 
     VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
-    if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
-    if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
-    if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
-    if (counts & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
-    if (counts & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
-    if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
+    if (counts & VK_SAMPLE_COUNT_64_BIT)
+    {
+        return VK_SAMPLE_COUNT_64_BIT;
+    }
+    if (counts & VK_SAMPLE_COUNT_32_BIT)
+    {
+        return VK_SAMPLE_COUNT_32_BIT;
+    }
+    if (counts & VK_SAMPLE_COUNT_16_BIT)
+    {
+        return VK_SAMPLE_COUNT_16_BIT;
+    }
+    if (counts & VK_SAMPLE_COUNT_8_BIT)
+    {
+        return VK_SAMPLE_COUNT_8_BIT;
+    }
+    if (counts & VK_SAMPLE_COUNT_4_BIT)
+    {
+        return VK_SAMPLE_COUNT_4_BIT;
+    }
+    if (counts & VK_SAMPLE_COUNT_2_BIT)
+    {
+        return VK_SAMPLE_COUNT_2_BIT;
+    }
 
     return VK_SAMPLE_COUNT_1_BIT;
 }

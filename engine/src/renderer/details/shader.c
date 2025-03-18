@@ -3,7 +3,7 @@
 #include "core/files.h"
 #include "core/debugger.h"
 
-VkShaderModule createShaderModule(VkDevice device, File* code){
+VkShaderModule createShaderModule(VkDevice device, FileHandle* code){
     VkShaderModuleCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code->size;

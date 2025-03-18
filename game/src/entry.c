@@ -1,16 +1,13 @@
 #include <data_types.h>
 
 #include <game.h>
-#include <core/files.h>
 #include <core/debugger.h>
 #include <core/input.h>
 #include <assets/asset_manager.h>
-#include <core/files.h>
-#include <core/events.h>
 #include <ecs/ecs.h>
 #include <components/meshRenderer.h>
 #include <components/UI/uiComponents.h>
-#include <collections/DynamicArray.h>
+#include <string/str.h>
 
 #include <math/trigonometry.h>
 #include <math/vec2.h>
@@ -22,7 +19,6 @@
 #include "systems/ui.h"
 
 void config(GameConfig* config){
-    
     config->platform.display.h = 500;
     config->platform.display.w = 750;
     config->platform.display.x = WINDOW_START_POSITION_CENTER;
@@ -46,33 +42,69 @@ void config(GameConfig* config){
     config->targetFPS = 180;
 }
 
+void createDefaultMaterial(Material* out){
+    Asset* _default = get_asset("default", ASSET_TYPE_TEXTURE);    
+    out->albedo = _default->data;
+    out->height = _default->data;
+    out->emissive = _default->data;
+    out->metalRoughAO = _default->data;
+    out->normal = _default->data;
+    out->normal = _default->data;
+    out->uvOffset = vec2_zero();
+    out->uvTiling = vec2_one();
+}
+
 void start(GameState* state){
     state->camera.pixelsPerPoint = 50.f;
     System sys = game_ui_system_ref(&state->scene, &state->renderer);
     ecs_register_system(&state->scene, &sys);
 
 
+    load_asset("./../resources/textures/viking_room.png", "viking_room");
     load_asset("./../resources/models/viking_room.obj", "viking_room");
     load_asset("./../resources/models/plane.obj", "plane");
 
-    MeshRenderer mesh0,plane;
-    createMeshRenderer("viking_room", &mesh0);
+    MeshRenderer viking_mesh,plane, plane0;
+    createMeshRenderer("viking_room", &viking_mesh);
     createMeshRenderer("plane", &plane);
+    createMeshRenderer("plane", &plane0);
     
+    //TODO: temp
+    Asset* texture = get_asset("image", ASSET_TYPE_TEXTURE);
+    Asset* viking_tex = get_asset("viking_room", ASSET_TYPE_TEXTURE);
+    
+    createDefaultMaterial(viking_mesh.material);
+    createDefaultMaterial(plane0.material);
+    createDefaultMaterial(plane.material);
+
+    viking_mesh.material->albedo = viking_tex->data ? viking_tex->data : viking_mesh.material->albedo;
+    plane.material->albedo = texture->data? texture->data : plane.material->albedo;
+    plane.material->uvTiling = vec2_new(1,1);
+    
+    plane0.material->uvTiling = vec2_new(2,2);
+    //end temp
+
     //test ecs entity
     EntityID vikingRoom0 = newEntity(&state->scene);
     EntityID cube = newEntity(&state->scene);
+    EntityID planeE = newEntity(&state->scene);
     Transform initT = {
         .position = vec3_new(1,0.5,-1),
         .rotation = vec3_new(-45,0,0),
         .scale = vec3_new(1,1,1)
     };
     ADD_COMPONENT(&state->scene, vikingRoom0, Transform, &initT);
-    ADD_COMPONENT(&state->scene, vikingRoom0, MeshRenderer, &mesh0);
+    ADD_COMPONENT(&state->scene, vikingRoom0, MeshRenderer, &viking_mesh);
     initT.position = vec3_new(0,0,0);
     initT.scale = vec3_new(3,0,3);
     ADD_COMPONENT(&state->scene, cube, Transform, &initT);
     ADD_COMPONENT(&state->scene, cube, MeshRenderer, &plane);
+
+    initT.position = vec3_new(-2.5,0,-2);
+    initT.rotation = vec3_new(45,0,0);
+    initT.scale = vec3_new(3,0,3);
+    ADD_COMPONENT(&state->scene, planeE, Transform, &initT);
+    ADD_COMPONENT(&state->scene, planeE, MeshRenderer, &plane0);
 }
 
 void updateCamController(GameState* state){

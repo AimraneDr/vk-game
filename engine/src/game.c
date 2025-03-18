@@ -3,15 +3,14 @@
 #include "platform/platform.h"
 #include "renderer/renderer.h"
 #include "core/debugger.h"
-#include "core/files.h"
 #include "core/memsys.h"
 #include "core/events.h"
 #include "core/input.h"
 #include "assets/asset_manager.h"
 #include <math/mathTypes.h>
-#include <collections/DynamicArray.h>
 #include <math/vec3.h>
 #include <math/vec2.h>
+#include <string/str.h>
 
 #include "components/Hierarchy.h"
 #include "components/transform.h"

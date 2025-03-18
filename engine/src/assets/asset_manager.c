@@ -17,10 +17,22 @@ typedef struct Assets_internal_state_t
 {
     hashset *assets[ASSET_MAX_TYPE];
     String *loaded_names[ASSET_MAX_TYPE];
+    bool asset_type_is_dirty[ASSET_MAX_TYPE];
+    u32 asset_counts[ASSET_MAX_TYPE];
     u32 asset_count;
 } AssetsInternalState;
 
 static AssetsInternalState _state = {0};
+
+u32 assets_get_count(AssetType type){
+    return _state.asset_counts[type];
+}
+u32 assets_get_total_count(){
+    return _state.asset_count;
+}
+bool assets_is_type_dirty(AssetType type){
+    return _state.asset_type_is_dirty[type];
+}
 
 void asset_manager_init()
 {
@@ -29,6 +41,8 @@ void asset_manager_init()
     {
         _state.assets[i] = 0;
         _state.loaded_names[i] = 0;
+        _state.asset_type_is_dirty[i] = false;
+        _state.asset_counts[i] = 0;
     }
 }
 
@@ -54,10 +68,15 @@ bool storeAsset(Asset *asset, const char *name)
 
 Asset *load_asset(const char *path, const char *name)
 {
-    String extension = file_extension(path);
+    String extension = path_get_file_extension(path);
     Asset *new = malloc(sizeof(Asset));
-    if (str_compare_val(extension, "obj") == 0)
+    if (str_equals_val(extension, "obj"))
     {
+        void* temp=0;
+        if(_state.assets[ASSET_TYPE_MODEL]) hashset_get_ptr(_state.assets[ASSET_TYPE_MODEL], name, &temp);
+        if(temp){
+            release_asset(name, ASSET_TYPE_MODEL);
+        }
         *new = load_obj(path);
         if (new->type == ASSET_TYPE_MODEL)
         {
@@ -73,11 +92,11 @@ Asset *load_asset(const char *path, const char *name)
         }
     }
     else if (
-        str_compare_val(extension, "jpeg") == 0 ||
-        str_compare_val(extension, "jpg") == 0 ||
-        str_compare_val(extension, "png") == 0)
+        str_equals_val(extension, "jpeg") ||
+        str_equals_val(extension, "jpg") ||
+        str_equals_val(extension, "png"))
     {
-        *new = load_texture(path);
+        *new = load_texture(path, _state.asset_counts[ASSET_TYPE_TEXTURE]);
         if (new->type == ASSET_TYPE_TEXTURE)
         {
             if (!storeAsset(new, name))
@@ -91,8 +110,13 @@ Asset *load_asset(const char *path, const char *name)
             return 0;
         }
     }
-    Asset *out;
+    Asset *out = 0;
     hashset_get_ptr(_state.assets[new->type], name, (void**)&out);
+    if(out) {
+        _state.asset_type_is_dirty[new->type] = true;
+        _state.asset_counts[new->type]++;
+        _state.asset_count++;
+    }
     return out;
 }
 
@@ -125,8 +149,13 @@ void release_asset(const char *name, AssetType type)
         LOG_ERROR("release_asset() : name is required to be non null and has a length greater than 0");
         return;
     }
-    Asset *asset;
+    Asset *asset=0;
     hashset_get_ptr(_state.assets[type], name, (void**)&asset);
+
+    if(!asset){
+        LOG_ERROR("release_asset() : asset not found");
+        return;
+    }
 
     switch (asset->type)
     {
@@ -140,6 +169,16 @@ void release_asset(const char *name, AssetType type)
         break;
     }
     hashset_set_ptr(_state.assets[type], name, 0);
+    _state.asset_type_is_dirty[type] = true;
+    _state.asset_counts[type]--;
+    _state.asset_count--;
+    for(u32 i=0; i< DynamicArray_Length(_state.loaded_names[type]); i++){
+        String* namesList = _state.loaded_names[type];
+        if(str_equals_val(namesList[i], name)){
+            DynamicArray_PopAt(_state.loaded_names[type], i, 0);
+            break;
+        }
+    }
     free(asset);
 }
 

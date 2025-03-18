@@ -13,8 +13,12 @@ typedef u64 Mask;
 typedef Mask ComponentType;
 
 typedef enum SystemProperty_e{
-    SYSTEM_PROPERTY_HIERARCHY_UPDATE = 1<<0,
-    SYSTEM_PROPERTY_HIERARCHY_START = 1<<1,
+    SYSTEM_PROPERTY_HIERARCHY_START = 1<<0,
+    SYSTEM_PROPERTY_HIERARCHY_PRE_UPDATE = 1<<1,
+    SYSTEM_PROPERTY_HIERARCHY_UPDATE = 1<<2,
+    SYSTEM_PROPERTY_HIERARCHY_POST_UPDATE = 1<<3,
+    SYSTEM_PROPERTY_HIERARCHY_DESTROY = 1<<4,
+    SYSTEM_PROPERTY_HIERARCHY_PROCESS = 1<<5,
 }SystemProperty;
 
 typedef enum SystemGroup_e{
@@ -38,22 +42,25 @@ typedef struct ComponentPool{
 
 typedef struct Scene_t Scene;
 
+typedef void (*SystemFunc)(void* sys_state, void* game_state); 
+typedef void (*SystemEntityFunc)(void* sys_state, void* game_state, EntityID e); 
+
 typedef struct System_t{
     const Mask Signature;
     SystemProperty properties;
     void* state;
     
     //functions
-    void (*start)(void* sState, void* gState);
-    void (*startEntity)(void* sys_state, void* gState, EntityID e);
-    void (*preUpdate)(void* sys_state, void* gState);
-    void (*preUpdateEntity)(void* sys_state, void* gState, EntityID e);
-    void (*update)(void* sys_state, void* gState);
-    void (*updateEntity)(void* sys_state, void* gState, EntityID e);
-    void (*postUpdate)(void* sys_state, void* gState);
-    void (*postUpdateEntity)(void* sys_state, void* gState, EntityID e);
-    void (*destroy)(void* sys_state, void* gState);
-    void (*destroyEntity)(void* sys_state, void* gState, EntityID e);
+    SystemFunc start;
+    SystemFunc preUpdate;
+    SystemFunc update;
+    SystemFunc postUpdate;
+    SystemFunc destroy;
+    SystemEntityFunc startEntity;
+    SystemEntityFunc preUpdateEntity;
+    SystemEntityFunc updateEntity;
+    SystemEntityFunc postUpdateEntity;
+    SystemEntityFunc destroyEntity;
 }System;
 
 //TODO: rename to : World, ecs_manager, 
