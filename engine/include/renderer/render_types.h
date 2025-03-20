@@ -212,6 +212,11 @@ typedef struct PBR_GLOBAL_UBO_t
 
 typedef struct PBR_Material_UBO_t
 {
+    Vec4 albedoFactor;
+    Vec4 emissiveFactor;
+    Vec2 uvTiling;
+    Vec2 uvOffset;
+    
     u32 albedo_idx;
     u32 normal_idx;
     u32 metalRoughAO_idx;
@@ -223,10 +228,6 @@ typedef struct PBR_Material_UBO_t
     f32 aoFactor;
     f32 heightScale;
 
-    Vec2 uvTiling;
-    Vec2 uvOffset;
-    Vec4 albedoFactor;
-    Vec4 emissiveFactor;
 } PBR_Material_UBO;
 
 typedef struct PBR_PushConstant_t
@@ -242,6 +243,7 @@ typedef struct UI_Global_UBO_t
 typedef struct UI_Element_UBO_t
 {
     Vec4 color;
+    Vec2 size;
 } UI_Element_UBO;
 
 typedef struct UI_PushConstant_t

@@ -2,6 +2,7 @@
 #define TRANSFORM_COMPONENT_H
 
 #include "data_types.h"
+#include "engine_defines.h"
 #include <math/mathTypes.h>
 #include "ecs/ecs_types.h"
 
@@ -23,5 +24,9 @@ typedef struct Transform2D_Component_t{
 
 void transform_update(Transform* t, Mat4* parentSpace);
 void transform2D_update(Transform2D* t, Mat4* parentSpace);
+
+API Vec3 transform_forward(Transform* t);
+API Vec3 transform_up(Transform* t);
+API Vec3 transform_right(Transform* t);
 
 #endif //TRANSFORM_COMPONENT_H

@@ -94,6 +94,7 @@ void renderer_shutdown(GameState* gState)
 
 void renderer_draw(GameState* gState)
 {
+    if(gState->platform.display.shouldClose) return;
     Renderer* r = &gState->renderer;
     PlatformState* p = &gState->platform;
 

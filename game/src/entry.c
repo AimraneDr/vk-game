@@ -13,6 +13,7 @@
 #include <math/vec2.h>
 #include <math/vec4.h>
 #include <math/mat.h>
+#include <math/mathUtils.h>
 
 #include <math/vec3.h>
 
@@ -28,12 +29,12 @@ void config(GameConfig* config){
     config->platform.title = str_new("My App");
     
     config->camera.farPlane = 1000.f;
-    config->camera.nearPlane = 0.01f;
-    config->camera.fieldOfView = 45.f;
+    config->camera.nearPlane = 0.0001f;
+    config->camera.fieldOfView = 65.f;
     config->camera.pos = vec3_new(0.f,5.f,-5.f);
     config->camera.rot = vec3_new(45.f,0.f,0.f);
     config->camera.orthographicSize = 3.f;
-    config->camera.useOrthographic = true;
+    config->camera.useOrthographic = false;
 
     config->renderer.msaaSamples = 4;
 
@@ -79,7 +80,6 @@ void start(GameState* state){
 
     viking_mesh.material->albedo = viking_tex->data ? viking_tex->data : viking_mesh.material->albedo;
     plane.material->albedo = texture->data? texture->data : plane.material->albedo;
-    plane.material->uvTiling = vec2_new(1,1);
     
     plane0.material->uvTiling = vec2_new(2,2);
     //end temp
@@ -89,56 +89,98 @@ void start(GameState* state){
     EntityID cube = newEntity(&state->scene);
     EntityID planeE = newEntity(&state->scene);
     Transform initT = {
-        .position = vec3_new(1,0.5,-1),
-        .rotation = vec3_new(-45,0,0),
+        .position = vec3_new(0,0.5,0),
+        .rotation = vec3_new(0,0,0),
         .scale = vec3_new(1,1,1)
     };
     ADD_COMPONENT(&state->scene, vikingRoom0, Transform, &initT);
     ADD_COMPONENT(&state->scene, vikingRoom0, MeshRenderer, &viking_mesh);
-    initT.position = vec3_new(0,0,0);
+    initT.position = vec3_new(0,1.5,1);
+    initT.rotation = vec3_new(90,0,0);
     initT.scale = vec3_new(3,0,3);
     ADD_COMPONENT(&state->scene, cube, Transform, &initT);
     ADD_COMPONENT(&state->scene, cube, MeshRenderer, &plane);
-
-    initT.position = vec3_new(-2.5,0,-2);
-    initT.rotation = vec3_new(45,0,0);
+    
+    initT.position = vec3_new(0,0,-.5);
+    initT.rotation = vec3_new(0,0,0);
     initT.scale = vec3_new(3,0,3);
     ADD_COMPONENT(&state->scene, planeE, Transform, &initT);
     ADD_COMPONENT(&state->scene, planeE, MeshRenderer, &plane0);
 }
 
-void updateCamController(GameState* state){
+void updateCamController(GameState* state) {
     Camera* cam = &state->camera;
-    static f32 moveSpeed = 5.f, rotateSpeed = 15.f;
-    if(is_key_pressed(&state->inputer, KEY_A)){
-        cam->transform.position.x-=moveSpeed*state->clock.deltaTime;
+    static f32 moveSpeed = 5.f, rotateSpeed = 30.f;
+    
+    Vec3 movement = vec3_zero();
+    Vec3 forward = camera_forward(cam);
+    Vec3 up = camera_up(cam);
+    Vec3 right = camera_right(cam);
+
+    // Handle movement differently for orthographic vs perspective
+    if (cam->useOrthographic) {
+        // Orthographic controls (2D-like movement)
+        if (is_key_pressed(&state->inputer, KEY_W)) {
+            movement = vec3_add(movement, vec3_scale(up, moveSpeed * state->clock.deltaTime));
+        }
+        if (is_key_pressed(&state->inputer, KEY_S)) {
+            movement = vec3_add(movement, vec3_scale(up, -moveSpeed * state->clock.deltaTime));
+        }
+        if (is_key_pressed(&state->inputer, KEY_A)) {
+            movement = vec3_add(movement, vec3_scale(right, -moveSpeed * state->clock.deltaTime));
+        }
+        if (is_key_pressed(&state->inputer, KEY_D)) {
+            movement = vec3_add(movement, vec3_scale(right, moveSpeed * state->clock.deltaTime));
+        }
+        // Q/E for depth (optional, might not affect orthographic view)
+        if (is_key_pressed(&state->inputer, KEY_Q)) {
+            movement = vec3_add(movement, vec3_scale(forward, moveSpeed * state->clock.deltaTime));
+        }
+        if (is_key_pressed(&state->inputer, KEY_E)) {
+            movement = vec3_add(movement, vec3_scale(forward, -moveSpeed * state->clock.deltaTime));
+        }
+    } else {
+        // Perspective controls (original code)
+        if (is_key_pressed(&state->inputer, KEY_W)) {
+            movement = vec3_add(movement, vec3_scale(forward, moveSpeed * state->clock.deltaTime));
+        }
+        if (is_key_pressed(&state->inputer, KEY_S)) {
+            movement = vec3_add(movement, vec3_scale(forward, -moveSpeed * state->clock.deltaTime));
+        }
+        if (is_key_pressed(&state->inputer, KEY_A)) {
+            movement = vec3_add(movement, vec3_scale(right, -moveSpeed * state->clock.deltaTime));
+        }
+        if (is_key_pressed(&state->inputer, KEY_D)) {
+            movement = vec3_add(movement, vec3_scale(right, moveSpeed * state->clock.deltaTime));
+        }
+        if (is_key_pressed(&state->inputer, KEY_Q)) {
+            movement = vec3_add(movement, vec3_scale(up, moveSpeed * state->clock.deltaTime));
+        }
+        if (is_key_pressed(&state->inputer, KEY_E)) {
+            movement = vec3_add(movement, vec3_scale(up, -moveSpeed * state->clock.deltaTime));
+        }
     }
-    if(is_key_pressed(&state->inputer, KEY_D)){
-        cam->transform.position.x+=moveSpeed*state->clock.deltaTime;
-    }
-    if(is_key_pressed(&state->inputer, KEY_W)){
-        cam->transform.position.z+=moveSpeed*state->clock.deltaTime;
-    }
-    if(is_key_pressed(&state->inputer, KEY_S)){
-        cam->transform.position.z-=moveSpeed*state->clock.deltaTime;
-    }
-    if(is_key_pressed(&state->inputer, KEY_Q)){
-        cam->transform.position.y+=moveSpeed*state->clock.deltaTime;
-    }
-    if(is_key_pressed(&state->inputer, KEY_E)){
-        cam->transform.position.y-=moveSpeed*state->clock.deltaTime;
-    }
-    if(is_key_pressed(&state->inputer, KEY_UP)){
-        cam->transform.rotation.x-=rotateSpeed*state->clock.deltaTime;
-    }
-    if(is_key_pressed(&state->inputer, KEY_DOWN)){
-        cam->transform.rotation.x+=rotateSpeed*state->clock.deltaTime;
-    }
-    if(is_key_pressed(&state->inputer, KEY_RIGHT)){
-        cam->transform.rotation.y+=rotateSpeed*state->clock.deltaTime;
-    }
-    if(is_key_pressed(&state->inputer, KEY_LEFT)){
-        cam->transform.rotation.y-=rotateSpeed*state->clock.deltaTime;
+
+    // Apply movement to camera position
+    cam->transform.position = vec3_add(cam->transform.position, movement);
+
+    // Handle rotation (optional: disable rotation for orthographic)
+    if (!cam->useOrthographic) { // Only allow rotation in perspective mode
+        if (is_key_pressed(&state->inputer, KEY_UP)) {
+            cam->transform.rotation.x -= rotateSpeed * state->clock.deltaTime;
+        }
+        if (is_key_pressed(&state->inputer, KEY_DOWN)) {
+            cam->transform.rotation.x += rotateSpeed * state->clock.deltaTime;
+        }
+        if (is_key_pressed(&state->inputer, KEY_RIGHT)) {
+            cam->transform.rotation.y += rotateSpeed * state->clock.deltaTime;
+        }
+        if (is_key_pressed(&state->inputer, KEY_LEFT)) {
+            cam->transform.rotation.y -= rotateSpeed * state->clock.deltaTime;
+        }
+
+        const float maxPitch = 85.f;
+        cam->transform.rotation.x = CLAMP(cam->transform.rotation.x, -maxPitch, maxPitch);
     }
 }
 

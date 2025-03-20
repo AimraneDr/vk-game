@@ -15,12 +15,14 @@ typedef struct Vertex {
     Vec2 texCoord;
 }Vertex;
 
-typedef struct Model_t{
-    u32 id;
-    Vertex* vertices;
-    u32* indices;
-    u32 vertex_count;
-    u32 index_count;
-}Model;
+// typedef struct Model_t{
+//     u32 id;
+//     Vertex* vertices;
+//     u32* indices;
+//     u32 vertex_count;
+//     u32 index_count;
+
+//     void* render_data_ptr;
+//}Model;
 
 #endif //MESH_TYPES_H

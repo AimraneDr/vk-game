@@ -6,6 +6,7 @@ typedef struct Hierarchy_t{
     EntityID parent;
     EntityID* children;
     bool outdated;
+    u32 depth_level;
 }Hierarchy;
 
 

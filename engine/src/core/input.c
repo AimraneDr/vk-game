@@ -12,6 +12,7 @@ EVENT_CALLBACK(onKeyButtonDown);
 EVENT_CALLBACK(onKeyButtonUp);
 EVENT_CALLBACK(onMouseMove);
 EVENT_CALLBACK(onMouseScroll);
+EVENT_CALLBACK(_onMouseLeaveWin);
 
 static EventListener
     onKeyDownListener,
@@ -19,7 +20,8 @@ static EventListener
     onButtonDownListener,
     onButtonUpListener,
     onMouseMoveListener,
-    onScrollListener;
+    onScrollListener,
+    onMouseLeaveWin;
 
 void input_system_init(InputManager *manager)
 {
@@ -52,17 +54,27 @@ void input_system_init(InputManager *manager)
     onScrollListener.callback = onMouseScroll;
     onScrollListener.listener = manager;
     subscribe_to_event(EVENT_TYPE_MOUSE_SCROLL, &onScrollListener);
+
+    onMouseLeaveWin.callback = _onMouseLeaveWin;
+    onMouseLeaveWin.listener = manager;
+    subscribe_to_event(EVENT_TYPE_MOUSE_LEAVE_WINDOW, &onMouseLeaveWin);
 }
 
-void input_system_update(InputManager* manager, f32 deltaTime){
-    for(u16 i=0; i<MAX_KEYS; i++){
-        if(manager->inputs[i] == KEY_STATE_RELEASED){
+void input_system_update(InputManager *manager, f32 deltaTime)
+{
+    for (u16 i = 0; i < MAX_KEYS; i++)
+    {
+        if (manager->inputs[i] == KEY_STATE_RELEASED)
+        {
             manager->inputs[i] = KEY_STATE_UP;
             manager->pressTime[i] = 0.f;
-        } else if (manager->inputs[i] == KEY_STATE_DOWN) {
+        }
+        else if (manager->inputs[i] == KEY_STATE_DOWN)
+        {
             manager->inputs[i] = KEY_STATE_PRESSED;
         }
-        if(manager->inputs[i] == KEY_STATE_PRESSED){
+        if (manager->inputs[i] == KEY_STATE_PRESSED)
+        {
             manager->pressTime[i] += deltaTime;
         }
     }
@@ -81,19 +93,24 @@ void input_system_shutdown(InputManager *manager)
     unsubsribe_from_event(EVENT_TYPE_MOUSE_SCROLL, &onScrollListener);
 }
 
-bool is_key_down(InputManager* manager, Key key){
+bool is_key_down(InputManager *manager, Key key)
+{
     return manager->inputs[key] == KEY_STATE_DOWN;
 }
-bool is_key_up(InputManager* manager, Key key){
+bool is_key_up(InputManager *manager, Key key)
+{
     return manager->inputs[key] == KEY_STATE_UP;
 }
-bool is_key_pressed(InputManager* manager, Key key){
+bool is_key_pressed(InputManager *manager, Key key)
+{
     return manager->inputs[key] == KEY_STATE_PRESSED;
 }
-bool is_key_released(InputManager* manager, Key key){
+bool is_key_released(InputManager *manager, Key key)
+{
     return manager->inputs[key] == KEY_STATE_RELEASED;
 }
-f32 get_key_press_duration(InputManager* manager, Key key) {
+f32 get_key_press_duration(InputManager *manager, Key key)
+{
     return manager->pressTime[key];
 }
 
@@ -101,18 +118,21 @@ f32 get_key_press_duration(InputManager* manager, Key key) {
 
 EVENT_CALLBACK(onKeyButtonDown)
 {
-    if(eContext.u8[0] == KEY_NULL) return;
+    if (eContext.u8[0] == KEY_NULL)
+        return;
 
     InputManager *manager = (InputManager *)listener;
     Key k = eContext.u8[0];
-    if(manager->inputs[k] == KEY_STATE_UP || manager->inputs[k] == KEY_STATE_RELEASED){
+    if (manager->inputs[k] == KEY_STATE_UP || manager->inputs[k] == KEY_STATE_RELEASED)
+    {
         manager->inputs[k] = KEY_STATE_DOWN;
     }
 };
 
 EVENT_CALLBACK(onKeyButtonUp)
 {
-    if(eContext.u8[0] == KEY_NULL) return;
+    if (eContext.u8[0] == KEY_NULL)
+        return;
     InputManager *manager = (InputManager *)listener;
     Key k = eContext.u8[0];
     manager->inputs[k] = KEY_STATE_RELEASED;
@@ -124,8 +144,8 @@ EVENT_CALLBACK(onMouseMove)
     u16 newX = eContext.u16[0];
     u16 newY = eContext.u16[1];
 
-    manager->mouse.delta.dx = newX - manager->mouse.pos.x; 
-    manager->mouse.delta.dy = newY - manager->mouse.pos.y; 
+    manager->mouse.delta.dx = newX - manager->mouse.pos.x;
+    manager->mouse.delta.dy = newY - manager->mouse.pos.y;
     manager->mouse.pos.x = newX;
     manager->mouse.pos.y = newY;
 };
@@ -134,6 +154,21 @@ EVENT_CALLBACK(onMouseScroll)
     InputManager *manager = (InputManager *)listener;
     manager->mouse.scrollDelta += eContext.i16[0];
 };
+
+EVENT_CALLBACK(_onMouseLeaveWin)
+{
+    InputManager *manager = (InputManager *)listener;
+    for (u16 i = MOUSE_BUTTON_LEFT; i <= MOUSE_BUTTON_1; i++)
+    {
+        if (manager->inputs[i] == KEY_STATE_PRESSED || manager->inputs[i] == KEY_STATE_DOWN)
+        {
+            manager->inputs[i] = KEY_STATE_UP;
+            manager->pressTime[i] = 0.f;
+        }
+    }
+    manager->mouse.pos.x = -1;
+    manager->mouse.pos.y = -1;
+}
 
 const char *key_name(Key key)
 {

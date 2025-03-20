@@ -4,6 +4,11 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 proj;
 } ubo;
 
+layout(binding = 1) uniform elemeentUBO {
+    vec4 color;
+    vec2 size;
+} elemeent;
+
 layout(push_constant) uniform PushConstant{
     mat4 model;
 }pc;
@@ -15,7 +20,8 @@ layout(location = 0) out vec4 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
 
 void main() {
-    gl_Position = ubo.proj * pc.model * vec4(inPosition, 1.0, 1.0);
+    vec2 newPos = inPosition * elemeent.size;
+    gl_Position = ubo.proj * pc.model * vec4(newPos, 1.0, 1.0);
     fragColor = vec4(1.f);
     fragTexCoord = inCoord;
 }

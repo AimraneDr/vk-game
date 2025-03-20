@@ -97,7 +97,7 @@ typedef enum Key{
 
 typedef struct MouseState_t{
     struct {
-        u16 x,y;
+        i16 x,y;
     }pos;
     struct {
         i16 dx,dy;

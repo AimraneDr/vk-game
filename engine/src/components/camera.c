@@ -13,7 +13,7 @@ void camera_updateViewMat(Camera* camera){
         deg_to_rad(camera->transform.rotation.z)
     );
     camera->view = mat4_viewYXZ(
-        camera->transform.position, radRot);
+        vec3_sub(camera->transform.position, vec3_scale(camera_forward(camera), -1)), radRot);
 }
 
 void camera_updateProjectionMat(Camera* camera, Vec2 frameExtent){
@@ -32,10 +32,20 @@ void camera_updateProjectionMat(Camera* camera, Vec2 frameExtent){
         );
     }else{
         camera->projection = mat4_perspective(
-            deg_to_rad(camera->fieldOfView),       // 45 degrees in radians
+            deg_to_rad(camera->fieldOfView),
             aspect,
             camera->nearPlane,
             camera->farPlane
         );
     }
+}
+
+Vec3 camera_forward(Camera* c){
+    return mat4_forward(c->view);
+}
+Vec3 camera_up(Camera* c){
+    return mat4_up(c->view);
+}
+Vec3 camera_right(Camera* c){
+    return mat4_right(c->view);
 }

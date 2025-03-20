@@ -2,6 +2,7 @@
 
 layout(binding = 1) uniform UniformBufferObject {
     vec4 color;
+    vec2 size;
 } ubo;
 layout(binding = 2) uniform sampler2D texSampler;
 

@@ -12,6 +12,8 @@ Key map_windows_keycode(u8 vk_code);
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     PlatformState* state = (PlatformState*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    static bool is_tracking_mouse_leave = false;
+
     switch (uMsg) {
         case WM_CLOSE:
             state->display.shouldClose = true;
@@ -137,10 +139,26 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         // Mouse Movement
         case WM_MOUSEMOVE:{
                 EventContext context = {
-                    .u16[0] = (u16)LOWORD(lParam),
-                    .u16[1] = (u16)HIWORD(lParam)
+                    .i16[0] = (i16)LOWORD(lParam),
+                    .i16[1] = (i16)HIWORD(lParam)
                 };
                 emit_event(EVENT_TYPE_MOUSE_MOVED, context, state);
+
+                if(!is_tracking_mouse_leave){
+                    emit_event(EVENT_TYPE_MOUSE_ENTER_WINDOW, context, state);
+
+                    TRACKMOUSEEVENT tme;
+                    tme.cbSize = sizeof(TRACKMOUSEEVENT);
+                    tme.dwFlags = TME_LEAVE;
+                    tme.hwndTrack = hwnd;
+                    TrackMouseEvent(&tme);
+                    is_tracking_mouse_leave = true;
+                }
+            }
+            break;
+        case WM_MOUSELEAVE:{
+                is_tracking_mouse_leave = false;
+                emit_event(EVENT_TYPE_MOUSE_LEAVE_WINDOW, (EventContext){0}, state);
             }
             break;
         // Mouse Buttons

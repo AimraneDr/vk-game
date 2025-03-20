@@ -61,7 +61,8 @@ void ecs_add_child(Scene* s, EntityID parent, EntityID child){
         Hierarchy h = {
             .parent = INVALID_ENTITY,
             .children = DynamicArray_Create(EntityID),
-            .outdated = false
+            .outdated = false,
+            .depth_level = 0
         };
         parentH = ADD_COMPONENT(s, parent, Hierarchy, &h);
     }
@@ -74,7 +75,8 @@ void ecs_add_child(Scene* s, EntityID parent, EntityID child){
         Hierarchy h = {
             .parent = parent,
             .children = DynamicArray_Create(EntityID),
-            .outdated = false
+            .outdated = false,
+            .depth_level = parentH->depth_level + 1
         };
         childH = ADD_COMPONENT(s, child, Hierarchy, &h);
     } else {
@@ -87,6 +89,7 @@ void ecs_add_child(Scene* s, EntityID parent, EntityID child){
             }
         }
         childH->parent = parent;
+        childH->depth_level = parentH->depth_level + 1;
     }
 }
 
@@ -106,5 +109,7 @@ void ecs_remove_child(Scene* s, EntityID parent, EntityID child){
     if(childH){
         //TODO: remove all sub children
         childH->parent = INVALID_ENTITY;
+        childH->depth_level = 0;
+        //TODO: update children's depth level
     }
 }

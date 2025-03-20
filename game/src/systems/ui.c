@@ -12,6 +12,7 @@
 #include <game.h>
 #include <core/events.h>
 #include <math/vec2.h>
+#include <math/mat.h>
 
 typedef struct InternalState_t{
     
@@ -35,8 +36,20 @@ System game_ui_system_ref(Scene* scene, Renderer* r){
 
 static ACTION_CALLBACK(_onMouseLHold){
     Transform2D* t = GET_COMPONENT(&state->scene, e, Transform2D);
-    Vec2 delta = vec2_new(state->inputer.mouse.delta.dx/state->camera.pixelsPerPoint, state->inputer.mouse.delta.dy/state->camera.pixelsPerPoint);
-    if(delta.x != 0 || delta.y != 0){
+    Vec2 delta = vec2_new(
+        state->inputer.mouse.delta.dx / state->camera.pixelsPerPoint,
+        state->inputer.mouse.delta.dy / state->camera.pixelsPerPoint
+    );
+
+    if (delta.x != 0 || delta.y != 0) {
+        // If the element has a parent, adjust delta for parent's transform
+        if (!mat4_compare(t->__local_mat, mat4_identity())) {
+            //TODO: move the space convertion to a helper function
+            Mat4 inv_parent = mat4_inverse(t->__local_mat);
+            Vec4 transformed_delta = mat4_mulVec4(inv_parent, vec4_fromVec2(delta, 0, 0));
+            delta = vec2_fromVec4(transformed_delta);
+        }
+
         t->position = vec2_add(t->position, delta);
     }
 }
@@ -50,7 +63,7 @@ void start(void* _state,  void* gState){
     //     .RotateSpeed = 45.f
     // };
     Transform2D containerTransform = {
-        .position = vec2_new(0.f, .5f),
+        .position = vec2_new(1.f, 1.f),
         .scale = vec2_new(1.f, 1.f),
         .rotation = 0.f,
     };
@@ -59,40 +72,44 @@ void start(void* _state,  void* gState){
         .background.hoverColor = vec4_new(.5,.7,.4,1),
         .width =1.f,
         .height =1.f,
-    };
-    UI_Style containerStyle0 = {
-        .background.color = vec4_new(0,.4,.7,1),
-        .background.hoverColor = vec4_new(.5,.4,.7,1),
-        .width =5.f,
-        .height =2.5f,
-    };
-    UI_Style containerStyle1 = {
-        .background.color = vec4_new(1,.5,.5,1),
-        .background.hoverColor = vec4_new(1,.1,.1,1),
-        .width =1.f,
-        .height =1.f,
+        
     };
     UI_Element c1 = ui_create_container(containerStyle, r);
-    UI_Element c2 = ui_create_container(containerStyle0, r);
-    UI_Element c3 = ui_create_container(containerStyle1, r);
-    
-    c1.onMouseLHold = _onMouseLHold;
+    c1.events.onMouseLHold = _onMouseLHold;
     EntityID container = newEntity(scene);
     ADD_COMPONENT(scene, container, UI_Element, &c1);
     ADD_COMPONENT(scene, container, Transform2D, &containerTransform);
+    
+    UI_Style containerStyle0 = {
+        .background.color = vec4_new(0,.4,.7,1),
+        .background.hoverColor = vec4_new(.5,.4,.7,1),
+        .width =2.f,
+        .height =2.f,
+    };
+    UI_Element c2 = ui_create_container(containerStyle0, r);
+    c2.events.onMouseLHold = _onMouseLHold;
+    containerTransform.position = vec2_new(2,2);
     EntityID container0 = newEntity(scene);
-    ecs_add_child(scene, container0, container);
-    containerTransform.position = vec2_new(0,0);
-    containerTransform.scale = vec2_new(2,2);
     ADD_COMPONENT(scene, container0, UI_Element, &c2);
     ADD_COMPONENT(scene, container0, Transform2D, &containerTransform);
+    ecs_add_child(scene, container0, container);
     
+    UI_Style containerStyle1 = {
+        .background.color = vec4_new(1,.5,.5,1),
+        .background.hoverColor = vec4_new(1,.1,.1,1),
+        .width =1.3f,
+        .height =.5f,
+    };
+    UI_Element c3 = ui_create_container(containerStyle1, r);
+    c3.events.onMouseLHold = _onMouseLHold;
     EntityID container1 = newEntity(scene);
     containerTransform.position = vec2_new(.2,.3);
-    containerTransform.scale = vec2_new(1.3,.5);
+    containerTransform.scale = vec2_new(2,2);
     ADD_COMPONENT(scene, container1, UI_Element, &c3);
     ADD_COMPONENT(scene, container1, Transform2D, &containerTransform);
     ecs_add_child(scene, container, container1);
+    
+    
     
     // ADD_COMPONENT(scene, container0, CharacterController, &controller);
 }

@@ -17,7 +17,7 @@ void subscribe_to_event(EventType t, EventListener* listener){
     }
     
     listener->_id = DynamicArray_Length(event_listeners[t]);
-    event_listeners[t] = __DynamicArray_push(event_listeners[t], listener);
+    DynamicArray_Push(event_listeners[t], *listener);
     // LOG_TRACE("Subscribed to event %d", t);
 }
 void emit_event(EventType type, EventContext context, void* sender){

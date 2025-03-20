@@ -138,6 +138,7 @@ void game_run(GameInterface Interface){
     while (!state.platform.display.shouldClose)
     {
         clock_tick(&frame_timer);
+        window_PullEvents(&state.platform);
         if(!state.suspended){
             clock_tick(&state.clock);
             
@@ -149,10 +150,9 @@ void game_run(GameInterface Interface){
             }
             ecs_systems_update(&state);
         }
-        input_system_update(&state.inputer, state.clock.deltaTime);
-        window_PullEvents(&state.platform);
         ecs_update(&state.scene);
-
+        
+        input_system_update(&state.inputer, state.clock.deltaTime);
         clock_tick(&frame_timer);
         if (frame_timer.deltaTime < state.targetFrameTime)
         {
