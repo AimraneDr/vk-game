@@ -8,10 +8,10 @@
 
 const u16 verticesCount = 4;
 static const UI_Vertex ui_vertices[] = {
-    {{ .x =  .5f, .y =  .5f}, { .x = 1.f, .y = 1.f}},
-    {{ .x = -.5f, .y =  .5f}, { .x = 0.f, .y = 1.f}},
-    {{ .x = -.5f, .y = -.5f}, { .x = 0.f, .y = 0.f}},
-    {{ .x =  .5f, .y = -.5f}, { .x = 1.f, .y = 0.f}}
+    {{ .x =  1.f, .y =  1.f}, { .x = 1.f, .y = 1.f}},
+    {{ .x = 0.f, .y =  1.f}, { .x = 0.f, .y = 1.f}},
+    {{ .x = 0.f, .y = 0.f}, { .x = 0.f, .y = 0.f}},
+    {{ .x =  1.f, .y = 0.f}, { .x = 1.f, .y = 0.f}}
 };
 
 const u16 indicesCount = 6;
@@ -21,7 +21,7 @@ static const u32 ui_indices[] = {
 
 UI_Element ui_create_container(UI_Style style, Renderer* r){
     
-    UI_Element new = ui_createElement(style);
+    UI_Element new = ui_create_element(style);
 
     new.renderer.indicesCount = indicesCount;
 

@@ -116,7 +116,7 @@ void recordCommandBuffer(GameState* gState, uint32_t imageIndex)
     };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
     
-    ecs_systems_update_group(gState, SYSTEM_GROUP_RENDERING);
+    ecs_systems_update_group(gState, 0, SYSTEM_GROUP_RENDERING);
 
     vkCmdEndRenderPass(commandBuffer);
 

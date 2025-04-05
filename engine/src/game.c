@@ -19,6 +19,7 @@
 
 #include "systems/PBR_renderer.h"
 #include "systems/UI_renderer.h"
+#include "systems/UI_manager.h"
 
 #include "ecs/ecs.h"
 
@@ -93,6 +94,7 @@ void game_init(GameConfig config, GameState* out){
     out->camera.viewRect = vec2i_new(out->platform.display.width,out->platform.display.height);
     //ecs
     ecs_init(out);
+    ecs_set_active_scene(&out->scene);
     RegisterDefaultComponents(&out->scene);
     RegisterDefaultSystems(&out->scene, &out->renderer, &out->camera);
 
@@ -131,7 +133,9 @@ void game_run(GameInterface Interface){
     //user specific startup
     if(Interface.start) Interface.start(&state);
 
-    ecs_systems_initialize(&state);
+    ecs_systems_start_group(&state, 0, SYSTEM_GROUP_UI);
+    ecs_systems_initialize(&state, 0);
+
     Clock frame_timer;
     clock_start(&state.clock);
     clock_start(&frame_timer);
@@ -142,15 +146,20 @@ void game_run(GameInterface Interface){
         if(!state.suspended){
             clock_tick(&state.clock);
             
+            ecs_systems_pre_update(&state, 0);
+            ecs_systems_pre_update_group(&state, 0, SYSTEM_GROUP_UI);
+            ecs_systems_update_group(&state, 0, SYSTEM_GROUP_UI);
             renderer_draw(&state);
             
             if(Interface.update) Interface.update(&state);
             if(is_key_down(&state.inputer, KEY_P)){
                 LOG_DEBUG("%.2f FPS", 1 /state.clock.deltaTime);
             }
-            ecs_systems_update(&state);
+            ecs_systems_update(&state, 0);
+            ecs_systems_post_update_group(&state, 0, SYSTEM_GROUP_UI);
+            ecs_systems_post_update(&state, 0);
         }
-        ecs_update(&state.scene);
+        ecs_update(0);
         
         input_system_update(&state.inputer, state.clock.deltaTime);
         clock_tick(&frame_timer);
@@ -160,7 +169,8 @@ void game_run(GameInterface Interface){
         }
     }
 
-    ecs_systems_shutdown(&state);
+    ecs_systems_shutdown(&state, 0);
+    ecs_systems_destroy_group(&state, 0, SYSTEM_GROUP_UI);
     if(Interface.cleanup) Interface.cleanup(&state);
     
     game_shutdown(&state);
@@ -247,6 +257,8 @@ void RegisterDefaultComponents(Scene* scene){
 void RegisterDefaultSystems(Scene* scene, Renderer* r, Camera* camera){
     System pbr_renderer = PBR_renderer_get_system_ref(scene,r, camera);
     System ui_renderer = UI_renderer_get_system_ref(scene,r);
+    System ui_manager = UI_manager_get_system_ref(scene);
     ecs_register_system_to_group(scene, &pbr_renderer, SYSTEM_GROUP_RENDERING);
     ecs_register_system_to_group(scene, &ui_renderer, SYSTEM_GROUP_RENDERING);
+    ecs_register_system_to_group(scene, &ui_manager, SYSTEM_GROUP_UI);
 }

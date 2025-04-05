@@ -26,7 +26,6 @@
 typedef struct UI_renderer_InternalState_t{
     const Renderer* r;
     Pipeline graphicsPipeline;
-    UI_Element** hovered_elems; //dynamic array
 
 }UI_renderer_InternalState;
 
@@ -48,18 +47,19 @@ void ui_updateElementUniformBuffer(void* uniformBufferMapped, f64 deltatime, UI_
 
 System UI_renderer_get_system_ref(Scene* scene, Renderer* r){
     UI_renderer_InternalState* s = malloc(sizeof(UI_renderer_InternalState));
-    memcpy(s,&(UI_renderer_InternalState){0}, sizeof(UI_renderer_InternalState));
+    s->graphicsPipeline = (Pipeline){0};
     s->r = r;
-    s->hovered_elems = 0;
     return (System){
         .Signature = COMPONENT_TYPE(scene, Transform2D) | COMPONENT_TYPE(scene, UI_Element),
         .properties = SYSTEM_PROPERTY_HIERARCHY_UPDATE,
-        .start = start,
-        .startEntity = start_entity,
-        .update = update,
-        .updateEntity = update_entity,
-        .destroy = destroy,
-        .state = s
+        .state = s,
+        .callbacks = {
+            .start = start,
+            .startEntity = start_entity,
+            .update = update,
+            .updateEntity = update_entity,
+            .destroy = destroy
+        }
     };
 }
 
@@ -74,7 +74,6 @@ System UI_renderer_get_system_ref(Scene* scene, Renderer* r){
 void start(void* _state, void* gState){
     //initialize the pipeline
     UI_renderer_InternalState* state = _state;
-    state->hovered_elems = DynamicArray_Create(UI_Element*);
     
     Renderer* r = &((GameState*)gState)->renderer;
     ui_createDescriptorSetLayout(r->context->device, &state->graphicsPipeline.descriptorSetLayout);
@@ -117,69 +116,6 @@ void start(void* _state, void* gState){
     ui_createDescriptorSets(r->context->device, state->graphicsPipeline.descriptorSetLayout, state->graphicsPipeline.descriptorPool, state->graphicsPipeline.uniform.global.buffers, state->graphicsPipeline.uniform.element.buffers, state->graphicsPipeline.uniform.element.alignedUboSize, state->graphicsPipeline.textureImageView, state->graphicsPipeline.textureSampler,state->graphicsPipeline.descriptorSets);
 }
 
-typedef struct onMouseMoveData_t{
-    EntityID e;
-    UI_renderer_InternalState* state;
-}onMouseMoveData;
-
-void checkMouseEvents(GameState* gState, EntityID e, UI_renderer_InternalState* state){
-    InputManager* inputs = &gState->inputer;
-    Scene* scene = &gState->scene;
-    Camera* cam = &gState->camera;
-
-    UI_Element* elem = GET_COMPONENT(scene, e, UI_Element);
-
-    if(inputs->mouse.pos.x == -1){
-        elem->hovered = false;
-        return;
-    } 
-
-    Transform2D* transform = GET_COMPONENT(scene, e, Transform2D);
-    Vec4 mouse_screen = vec4_new(inputs->mouse.pos.x/cam->pixelsPerPoint,inputs->mouse.pos.y/cam->pixelsPerPoint, 0, 1);
-    Vec4 mouse_local = vec4_zero();
-    
-    Mat4 model_matrix = mat4_mul(transform->mat, transform->__local_mat);
-
-    // Correct inverse for hit detection:
-    Mat4 inv_model = mat4_inverse(model_matrix);
-    mouse_local = mat4_mulVec4(inv_model, mouse_screen);
-    
-    //TODO: unless the width and height afects rendering do not use them in calculations
-    Vec4 halfSize = vec4_new(elem->style.width/2.f, elem->style.height/2.f, 0, 1);
-    if(mouse_local.x >= -halfSize.x && 
-        mouse_local.x <= halfSize.x && 
-        mouse_local.y >= -halfSize.y && 
-        mouse_local.y <= halfSize.y)
-    {
-        if(!elem->hovered){
-            elem->hovered = true;
-            bool present_in_hovered = false;
-            for(u8 i=0; i< DynamicArray_Length(state->hovered_elems); i++){
-                if(state->hovered_elems[i]->id == elem->id){
-                    present_in_hovered = true;
-                    break;
-                }
-            }
-            if(!present_in_hovered)DynamicArray_Push(state->hovered_elems, elem);
-            if(elem->events.onMouseEnter)elem->events.onMouseEnter(gState, e, elem);
-            return;
-        }else{
-            if(elem->events.onMouseStay)elem->events.onMouseStay(gState, e, elem);
-            return;
-        }
-    }
-
-    if(elem->hovered){
-        elem->hovered = false;
-        if(elem->events.onMouseLeave)elem->events.onMouseLeave(gState, e, elem);
-        for(u8 i=0; i< DynamicArray_Length(state->hovered_elems); i++){
-            if(state->hovered_elems[i]->id == elem->id){
-                DynamicArray_PopAt(state->hovered_elems, i, 0);
-            }
-        }
-        return;
-    }
-}
 
 void start_entity(void* _state, void* gState, EntityID e){
     //this is called on the start of the program , when it should be called on the creating of an entity
@@ -202,7 +138,6 @@ void update(void* _state, void* gState){
 
 void update_entity(void* _state, void* gState, EntityID e){
     UI_renderer_InternalState* state = _state;
-    InputManager* inputs = &((GameState*)gState)->inputer;
     Renderer* r = &((GameState*)gState)->renderer;
     Scene* scene = &((GameState*)gState)->scene;
     f32 dt = ((GameState*)gState)->clock.deltaTime;
@@ -212,7 +147,8 @@ void update_entity(void* _state, void* gState, EntityID e){
     Hierarchy* h = GET_COMPONENT(scene, e, Hierarchy);
     Transform2D* parentT = 0;
 
-    if(elem->id != e)elem->id = e;
+    if(elem->id != e)
+        elem->id = e;
 
     if(h && h->parent != INVALID_ENTITY) parentT = GET_COMPONENT(scene, h->parent, Transform2D);
     if(parentT){
@@ -222,46 +158,6 @@ void update_entity(void* _state, void* gState, EntityID e){
         transform2D_update(t, 0);
     }
 
-    //emit events
-    //click
-    //TODO: add elem checking, even if it is hovered that does not mean it is what is selected, a child elem can be selected instead
-    checkMouseEvents(gState, e, _state);
-
-    if(elem->hovered){
-        bool topMost = true;
-        u32 hovered_count = DynamicArray_Length(state->hovered_elems);
-        for(u8 i=0; i< hovered_count; i++){
-            EntityID id = state->hovered_elems[i]->id;
-            Hierarchy* _h = GET_COMPONENT(scene, id, Hierarchy);
-            if(_h && _h->depth_level > h->depth_level){
-                topMost = false;
-                break;
-            }
-        }
-        if(topMost){
-            if(is_key_down(inputs, MOUSE_BUTTON_LEFT)){
-                elem->mouse_state.Lclicked = true;
-                if(elem->events.onMouseLDown)elem->events.onMouseLDown(gState, e, elem);
-            }
-            if(is_key_up(inputs, MOUSE_BUTTON_LEFT)){
-                elem->mouse_state.Lclicked = false;
-                if(elem->events.onMouseLUp)elem->events.onMouseLUp(gState, e, elem);
-            }
-            
-            if(is_key_down(inputs, MOUSE_BUTTON_RIGHT)){
-                elem->mouse_state.Rclicked = true;
-                if(elem->events.onMouseRDown)elem->events.onMouseRDown(gState, e, elem);
-            }
-            if(is_key_up(inputs, MOUSE_BUTTON_RIGHT)){
-                elem->mouse_state.Rclicked = false;
-                if(elem->events.onMouseRUp)elem->events.onMouseRUp(gState, e, elem);
-            }
-        }
-    }
-
-    if(elem->mouse_state.Lclicked && is_key_pressed(inputs, MOUSE_BUTTON_LEFT) && elem->events.onMouseLHold)elem->events.onMouseLHold(gState, e, elem);
-    if(elem->mouse_state.Rclicked && is_key_pressed(inputs, MOUSE_BUTTON_RIGHT) && elem->events.onMouseRHold)elem->events.onMouseRHold(gState, e, elem);
-    
 
     UI_PushConstant pc = {
         .model = mat4_mul(t->mat, t->__local_mat)
@@ -292,7 +188,6 @@ void destroy(void* _state, void* gState){
     UI_renderer_InternalState* state = _state;
     Renderer* r = &((GameState*)gState)->renderer;
 
-    DynamicArray_Destroy(state->hovered_elems);
     vkDeviceWaitIdle(r->context->device);
     destroyUniformBuffers(r->context->device, state->graphicsPipeline.uniform.global.buffers, state->graphicsPipeline.uniform.global.buffersMemory);
     destroyUniformBuffers(r->context->device, state->graphicsPipeline.uniform.element.buffers, state->graphicsPipeline.uniform.element.buffersMemory);
@@ -457,13 +352,13 @@ void ui_updateGlobalUniformBuffer(uint32_t currentImage, void** uniformBuffersMa
     UI_Global_UBO ubo;
     
     // View matrix remains identity for screen-space UI
-    Vec2 virtualCanvas = vec2_new(camera->viewRect.x/camera->pixelsPerPoint, camera->viewRect.y/camera->pixelsPerPoint);
+    Vec2 virtualCanvas = vec2_new(camera->viewRect.w, camera->viewRect.h);
     ubo.proj = mat4_orthographic(
         0.0f, 
         virtualCanvas.x,  // Left to Right = canvas width
         virtualCanvas.y,  // Top to Bottom = canvas height (Vulkan Y-down)
         0.0f, 
-        -1.0f, 
+        -1.0f,
         1.0f
     );
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
@@ -473,7 +368,9 @@ void ui_updateElementUniformBuffer(void* uniformBufferMapped, f64 deltatime, UI_
     UI_Element_UBO ubo;
     
     ubo.color = !uiElement->hovered ? uiElement->style.background.color : uiElement->style.background.hoverColor;
-    ubo.size = vec2_new(uiElement->style.width, uiElement->style.height);
+    ubo.size = ui_element_get_final_size(uiElement);
+    ubo.borderColor = !uiElement->hovered ? uiElement->style.border.color : uiElement->style.border.hoverColor;
+    ubo.borderWidth = uiElement->style.border.thickness;
 
     VkDeviceSize offset = alignIndex * alignedUboSize;
     memcpy((void*)uniformBufferMapped+offset, &ubo, sizeof(ubo));

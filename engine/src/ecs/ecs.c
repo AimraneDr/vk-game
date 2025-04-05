@@ -5,9 +5,11 @@
 #include <stdlib.h>
 #include "core/events.h"
 
+static Scene* activeScene;
+
 EVENT_CALLBACK(onComponentAdded){
     EntityID e = eContext.u16[0];
-    ecs_systems_start_entity(listener, e);
+    ecs_systems_start_entity(listener, sender ? sender : ecs_get_active_scene(), e);
 }
 
 void ecs_init(GameState* gState){
@@ -15,8 +17,10 @@ void ecs_init(GameState* gState){
     out->freeEntities = malloc(MAX_ENTITIES * sizeof(EntityID));
     out->freeEntitiesCount = MAX_ENTITIES;
     out->rootEntities.dense = DynamicArray_Create(EntityID);
+    out->leafEntities.dense = DynamicArray_Create(EntityID);
     for (u32 i = 0; i < MAX_ENTITIES; i++) {
         out->rootEntities.sparse[i] = INVALID_ENTITY;
+        out->leafEntities.sparse[i] = INVALID_ENTITY;
         out->freeEntities[i] = i;
         out->EntitiesSignatures[i] = 0;
         out->oldEntitiesSignatures[i] = 0;
@@ -33,27 +37,48 @@ void ecs_init(GameState* gState){
     subscribe_to_event(EVENT_TYPE_COMPONENT_ADDED, &(EventListener){.callback=onComponentAdded, .listener=gState});
 }
 void ecs_update(Scene* s){
+    s = s? s : activeScene;
     for (u32 i = 0; i < MAX_ENTITIES; i++) {
         s->oldEntitiesSignatures[i] = s->EntitiesSignatures[i];
     }
 }
 void ecs_shutdown(Scene* s){
+    s = s? s : activeScene;
     for(u8 i=0; i<MAX_SYSTEM_GROUPS; i++){
         DynamicArray_Destroy(s->systemGroups[i]);
     }
 
     DynamicArray_Destroy(s->rootEntities.dense);
+    DynamicArray_Destroy(s->leafEntities.dense);
     free(s->freeEntities);
     s->freeEntities = 0;
     s->freeEntitiesCount = 0;
 }
 
+void ecs_set_active_scene(Scene* s){
+    activeScene = s;
+}
 
-void ecs_add_child(Scene* s, EntityID parent, EntityID child){
+Scene* ecs_get_active_scene(){
+    return activeScene;
+}
+
+
+/// @brief update the connection between parent and child
+/// @param s 
+/// @param parent if INVALID_ENTITY : make the child a root entity
+/// @param child if INVALID_ENTITY : make all the child a root entity and the parent a leaf entity 
+void ecs_move_entity(Scene* s, EntityID parent, EntityID child){
+    s = s? s : activeScene;
+
     //pop child from root if it is one
     if(s->rootEntities.sparse[child] != INVALID_ENTITY){
         DynamicArray_PopAt(s->rootEntities.dense, s->rootEntities.sparse[child], 0);
         s->rootEntities.sparse[child] = INVALID_ENTITY;
+    }
+    if(parent && s->leafEntities.sparse[parent] != INVALID_ENTITY){
+        DynamicArray_PopAt(s->leafEntities.dense, s->leafEntities.sparse[parent], 0);
+        s->leafEntities.sparse[parent] = INVALID_ENTITY;
     }
 
     Hierarchy* parentH = GET_COMPONENT(s, parent, Hierarchy);
@@ -72,6 +97,7 @@ void ecs_add_child(Scene* s, EntityID parent, EntityID child){
     // Ensure child has a HierarchyComponent
     Hierarchy* childH = GET_COMPONENT(s, child, Hierarchy);
     if (!childH) {
+        // add hierarchy component to child
         Hierarchy h = {
             .parent = parent,
             .children = DynamicArray_Create(EntityID),
@@ -80,6 +106,7 @@ void ecs_add_child(Scene* s, EntityID parent, EntityID child){
         };
         childH = ADD_COMPONENT(s, child, Hierarchy, &h);
     } else {
+        //if child has parent : move the child to the new parent
         Hierarchy* oldParent = GET_COMPONENT(s, childH->parent, Hierarchy);
         if(oldParent){
             for(u16 i=0; i<DynamicArray_Length(oldParent->children); i++){
@@ -87,29 +114,14 @@ void ecs_add_child(Scene* s, EntityID parent, EntityID child){
                     DynamicArray_PopAt(oldParent->children, i, 0);
                 }
             }
+            //if no children are left make a leaf 
+            if(DynamicArray_Length(oldParent->children) ==0){
+                u16 idx = DynamicArray_Length(s->leafEntities.dense);
+                s->leafEntities.sparse[childH->parent] = idx;
+                DynamicArray_Push(s->leafEntities.dense, childH->parent);
+            }
         }
         childH->parent = parent;
         childH->depth_level = parentH->depth_level + 1;
-    }
-}
-
-void ecs_remove_child(Scene* s, EntityID parent, EntityID child){
-    Hierarchy* parentH = GET_COMPONENT(s, parent, Hierarchy);
-    if(!parentH)return;
-
-    u32 childrenCount = DynamicArray_Length(parentH->children);
-    for(u32 i=0; i< childrenCount; i++){
-        if(parentH->children[i] == child){
-            DynamicArray_PopAt(parentH->children, i, 0);
-            break;
-        }
-    }
-
-    Hierarchy* childH = GET_COMPONENT(s, child, Hierarchy);
-    if(childH){
-        //TODO: remove all sub children
-        childH->parent = INVALID_ENTITY;
-        childH->depth_level = 0;
-        //TODO: update children's depth level
     }
 }

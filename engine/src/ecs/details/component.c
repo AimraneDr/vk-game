@@ -12,6 +12,8 @@
 /// @return
 void ecs_register_component(Scene *scene, const char* name, u16 size)
 {
+    scene = scene? scene : ecs_get_active_scene();
+
     if(scene->componentTypesCount >= MAX_COMPONENT_TYPES){
         LOG_ERROR("cannot register component, you hit the max component types count");
         return;
@@ -30,6 +32,8 @@ void ecs_register_component(Scene *scene, const char* name, u16 size)
 }
 
 ComponentType ecs_get_component_type(Scene* scene, const char* name) {
+    scene = scene? scene : ecs_get_active_scene();
+    
     for (u8 i = 0; i < scene->componentTypesCount; i++) {
         if (str_equals_val(scene->componentNames[i], name)) {
             return (u64)1 << i;
@@ -40,6 +44,8 @@ ComponentType ecs_get_component_type(Scene* scene, const char* name) {
 
 void *ecs_get_component(Scene* s, EntityID e, ComponentType t)
 {
+    s = s ? s : ecs_get_active_scene();
+
     if (!ecs_entity_has_component(s, e, t))
         return 0;
     ComponentPool* p = &s->pools[__builtin_ffsll(t) - 1];
@@ -51,6 +57,8 @@ void *ecs_get_component(Scene* s, EntityID e, ComponentType t)
 
 void* ecs_add_component(Scene* s, EntityID e, ComponentType t, void *component)
 {
+    s = s ? s : ecs_get_active_scene();
+
     if((s->EntitiesSignatures[e] & t) == t){
         LOG_ERROR("entity already has component");
         return 0;
@@ -67,6 +75,8 @@ void* ecs_add_component(Scene* s, EntityID e, ComponentType t, void *component)
 
 void ecs_remove_component(Scene* s, EntityID e, ComponentType t)
 {
+    s = s ? s : ecs_get_active_scene();
+
     ComponentPool* p = &s->pools[__builtin_ffsll(t) - 1];
     DynamicArray_PopAt(p->dense, p->sparse[e], 0);
     DynamicArray_PopAt(p->components, p->sparse[e], 0);
@@ -80,6 +90,8 @@ void ecs_remove_component(Scene* s, EntityID e, ComponentType t)
 
 void ecs_remove_all_components(Scene* s, EntityID e)
 {
+    s = s ? s : ecs_get_active_scene();
+
     Mask m = s->EntitiesSignatures[e];
     while (m) {
         // find the first 1 bit from the right

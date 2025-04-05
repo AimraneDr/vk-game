@@ -6,7 +6,9 @@ layout(binding = 0) uniform UniformBufferObject {
 
 layout(binding = 1) uniform elemeentUBO {
     vec4 color;
+    vec4 borderColor;
     vec2 size;
+    float borderWidth;
 } elemeent;
 
 layout(push_constant) uniform PushConstant{

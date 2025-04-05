@@ -243,7 +243,9 @@ typedef struct UI_Global_UBO_t
 typedef struct UI_Element_UBO_t
 {
     Vec4 color;
+    Vec4 borderColor;
     Vec2 size;
+    f32 borderWidth;
 } UI_Element_UBO;
 
 typedef struct UI_PushConstant_t

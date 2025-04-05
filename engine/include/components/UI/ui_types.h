@@ -8,40 +8,43 @@
 #include "ecs/ecs_types.h"
 #include "game.h"
 
-typedef enum ElementPosition_e{
-    ELEMENT_POSITION_HORIZONTAL_START = 1<<0,
-    ELEMENT_POSITION_HORIZONTAL_CENTER = 1<<1,
-    ELEMENT_POSITION_HORIZONTAL_END = 1<<2,
-    ELEMENT_POSITION_VERTICAL_START = 1<<3,
-    ELEMENT_POSITION_VERTICAL_CENTER = 1<<4,
-    ELEMENT_POSITION_VERTICAL_END = 1<<5
-}ElementPosition;
 
-typedef enum ElementSize_e{
-    ELEMENT_SIZE_FIT,
-    ELEMENT_SIZE_FULL,
-    ELEMENT_SIZE_STYLE
-}ElementSize;
+typedef enum UI_Element_Size_Mode_e{
+    UI_SIZE_UNIT_POINT,
+    UI_SIZE_UNIT_PIXEL,
+    UI_SIZE_UNIT_PERCENT,
+}UISizeUnit;
 
-typedef enum ElementLayout_e{
-    ELEMENT_LAYOUT_HORIZONTAL_FLEX,
-    ELEMENT_LAYOUT_VERTICAL_FLEX,
-    ELEMENT_LAYOUT_HORIZONTAL_GRID,
-    ELEMENT_LAYOUT_VERTICAL_GRID,
-}ElementLayout;
+typedef enum UI_Element_Size_e{
+    UI_SIZE_FIT = 1,
+    UI_SIZE_FULL,
+    UI_SIZE_WIDTH_HEIGHT
+}UISize;
+
+typedef enum UI_Element_Layout_e{
+    UI_LAYOUT_HORIZONTAL,
+    UI_LAYOUT_VERTICAL
+}UILayout;
+
+typedef enum UI_Box_e{
+    UI_BOX_FLEX,
+    UI_BOX_GRID
+}UIBox;
 
 typedef struct UI_Style_t {
     //shape
     f32 width,height;
 
-    ElementPosition positon;
-    ElementSize size;
-    ElementLayout layout;
+
+    UISize size;
+    UISizeUnit size_unit;
+    UILayout layout;
+    UIBox box;
     
     // Background
     struct {
         Vec4 color;         // RGBA color
-        VkDescriptorSet texture; // Optional texture descriptor
+        VkDescriptorSet sprite; // Optional texture descriptor
         Vec4 hoverColor;
     } background;
 
@@ -54,8 +57,9 @@ typedef struct UI_Style_t {
     } border;
 
     // Layout
-    Vec4 margin;        // Left, Right, Top, Bottom
-    Vec4 padding;       // Left, Right, Top, Bottom
+    Vec4 margin;        // top, Right, bottom, left
+    Vec4 padding;       // top, Right, bottom, left
+    Vec2 gap;           // horizontal, vertical
 
     // Text (if element contains text)
     struct {
@@ -79,7 +83,7 @@ typedef struct UI_Element_t{
 
     
 
-    //TODO: rename to render context
+    //TODO: move or change
     struct{
         VkBuffer vertexBuffer;
         VkDeviceMemory vertexBufferMemory;
@@ -110,6 +114,8 @@ typedef struct UI_Element_t{
     }mouse_state;
 
     bool hovered;
+
+    void* internal;
 } UI_Element;
 
 typedef struct UI_Manager_t{

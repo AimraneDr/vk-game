@@ -56,7 +56,7 @@ void createDefaultMaterial(Material* out){
 }
 
 void start(GameState* state){
-    state->camera.pixelsPerPoint = 50.f;
+    state->camera.pixelsPerPoint = 12.f;
     System sys = game_ui_system_ref(&state->scene, &state->renderer);
     ecs_register_system(&state->scene, &sys);
 

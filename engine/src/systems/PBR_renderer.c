@@ -55,14 +55,16 @@ System PBR_renderer_get_system_ref(Scene* scene, Renderer* r, Camera* camera){
     s->r = r;
     return (System){
         .Signature = ecs_get_component_type(scene, "MeshRenderer") | ecs_get_component_type(scene, "Transform"),
-        .start = start,
-        .preUpdate = pre_update,
-        .preUpdateEntity = pre_update_entity,
-        .update = update,
-        .updateEntity = update_entity,
-        .destroy = destroy,
-        .destroyEntity = destroy_entity,
-        .state = s
+        .state = s,
+        .callbacks = {
+            .start = start,
+            .preUpdate = pre_update,
+            .preUpdateEntity = pre_update_entity,
+            .update = update,
+            .updateEntity = update_entity,
+            .destroy = destroy,
+            .destroyEntity = destroy_entity
+        }
     };
 }
 

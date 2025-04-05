@@ -63,7 +63,7 @@ void renderer_init(RendererInitConfig config, GameState* gState)
     createSyncObjects(c->device, r->sync.imageAvailableSemaphores, r->sync.renderFinishedSemaphores, r->sync.inFlightFences);
 
     //start all rendering systems
-    ecs_systems_start_group(gState, SYSTEM_GROUP_RENDERING);
+    ecs_systems_start_group(gState, 0, SYSTEM_GROUP_RENDERING);
 
     // Subscribe to Events
     EventListener onResizeListener = {
@@ -81,7 +81,7 @@ void renderer_shutdown(GameState* gState)
 
     destroySyncObjects(r->context->device, r->sync.imageAvailableSemaphores, r->sync.renderFinishedSemaphores, r->sync.inFlightFences);
 
-    ecs_systems_destroy_group(gState, SYSTEM_GROUP_RENDERING);
+    ecs_systems_destroy_group(gState, 0, SYSTEM_GROUP_RENDERING);
     
     destroyFramebuffers(r->context->device, r->context->swapchainFrameBuffers, r->context->swapchainImagesCount);
     destroyDepthResources(r->context->device, r->context->depth.image, r->context->depth.memory, r->context->depth.view);
@@ -115,11 +115,11 @@ void renderer_draw(GameState* gState)
     vkResetFences(r->context->device, 1, &r->sync.inFlightFences[r->currentFrame]);
     vkResetCommandBuffer(r->context->commandBuffers[r->currentFrame], 0);
 
-    ecs_systems_pre_update_group(gState, SYSTEM_GROUP_RENDERING);
+    ecs_systems_pre_update_group(gState, 0, SYSTEM_GROUP_RENDERING);
     
     recordCommandBuffer(gState, imageIndex);
 
-    ecs_systems_post_update_group(gState, SYSTEM_GROUP_RENDERING);
+    ecs_systems_post_update_group(gState, 0, SYSTEM_GROUP_RENDERING);
     
     VkSemaphore waitSemaphores[] = {r->sync.imageAvailableSemaphores[r->currentFrame]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
