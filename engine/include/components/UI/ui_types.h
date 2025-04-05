@@ -16,9 +16,9 @@ typedef enum UI_Element_Size_Mode_e{
 }UISizeUnit;
 
 typedef enum UI_Element_Size_e{
-    UI_SIZE_FIT = 1,
-    UI_SIZE_FULL,
-    UI_SIZE_WIDTH_HEIGHT
+    UI_SIZE_WIDTH_HEIGHT,
+    UI_SIZE_FIT,
+    UI_SIZE_FULL
 }UISize;
 
 typedef enum UI_Element_Layout_e{
@@ -115,6 +115,7 @@ typedef struct UI_Element_t{
 
     bool hovered;
 
+    void* state;
     void* internal;
 } UI_Element;
 

@@ -25,8 +25,9 @@ static EventListener
 
 void input_system_init(InputManager *manager)
 {
+    //TODO: catch out of window mouse state
     manager->mouse = (MouseState){
-        .pos = {0, 0},
+        .pos = {-1, -1},
         .delta = {0, 0},
         .scrollDelta = 0};
 

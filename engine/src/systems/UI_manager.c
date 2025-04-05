@@ -70,7 +70,6 @@ void start_entity(void *sys_state, void *game_state, EntityID e)
 void pre_update(void *sys_state, void *game_state)
 {
     Camera *cam = &((GameState *)game_state)->camera;
-    ui_canvas_padding(vec4_zero());
     ui_canvas_size(vec2_new(cam->viewRect.w, cam->viewRect.h));
     ui_canvas_resolution(cam->pixelsPerPoint);
     ui_canvas_flush();

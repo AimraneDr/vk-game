@@ -7,17 +7,17 @@
 
 Vec4 ui_builder_canvas_padding_get(void);
 void ui_builder_canvas_padding_set(Vec4 pad);
-Vec2 ui_builder_canvas_positon_get();
+Vec2 ui_builder_canvas_positon_get(void);
 void ui_builder_canvas_positon_set(Vec2 pos);
-Vec2 ui_builder_canvas_size_get();
+Vec2 ui_builder_canvas_size_get(void);
 void ui_builder_canvas_size_set(Vec2 size);
-u32 ui_builder_canvas_resolution_get();
+u32 ui_builder_canvas_resolution_get(void);
 void ui_builder_canvas_resolution_set(u32 pixels_per_point);
-void ui_builder_canvas_flush();
+void ui_builder_canvas_flush(void);
 
 API void ui_builder_reset_tree(void);
 API void ui_builder_open_element(EntityID elem);
-API void ui_builder_close_element();
+API void ui_builder_close_element(void);
 
 /// @brief uses the virtual tree constructed by opening and closing elements to calculate the look of the UI
 API void ui_builder_build();

@@ -56,6 +56,11 @@ static ACTION_CALLBACK(_onMouseLHold)
         t->position = vec2_add(t->position, delta);
     }
 }
+static ACTION_CALLBACK(_onMouseDown)
+{
+    Transform2D *t = GET_COMPONENT(&state->scene, e, Transform2D);
+    
+}
 #include <collections/DynamicArray.h>
 void start(void *_state, void *gState)
 {
@@ -72,63 +77,26 @@ void start(void *_state, void *gState)
         .rotation = 0.f,
     };
     UI_Style containerStyle = {
-        .background.color = vec4_new(.5, .2, .6, .5),
-        .background.hoverColor = vec4_new(.3, .2, .6, .5),
-        .width = 2.5f,
-        .height = 2.5f,
+        .background.color = vec4_new(.1, .1, .1, 1),
+        .background.hoverColor = vec4_new(.1, .3, .1, 1),
+        .width = 25.f,
+        .height = 25.f,
         .border = {
             .color = vec4_new(0, 1, 1, 1),
             .hoverColor = vec4_new(0, .5, .5, 1),
             .thickness = 1000},
-        .layout = UI_LAYOUT_VERTICAL,
-        .size = UI_SIZE_FULL,
+        .layout = UI_LAYOUT_HORIZONTAL,
         .padding = vec4_new(12, 12, 12, 12),
         .gap = vec2_new(12, 12),
-        .margin = vec4_zero()
+        .margin = vec4_zero(),
     };
     UI_Element c = ui_create_container(containerStyle, r);
-    c.events.onMouseLHold = _onMouseLHold;
+    c.events.onMouseLDown = _onMouseDown;
     EntityID container = newEntity(scene); // 96
     ADD_COMPONENT(scene, container, UI_Element, &c);
     ADD_COMPONENT(scene, container, Transform2D, &containerTransform);
-
-    for (u8 i = 0; i < 5; i++)
-    {
-        UI_Style style = {
-            .background.color = vec4_new(0, .9 - (i * .1), .1 + (i * 0.1), i == 2 ? 0 : 1),
-            .background.hoverColor = vec4_new(.5, .9 - (i * .1), .1 + (i * 0.1), i == 2 ? 0 : 1),
-            .width = 250.f,
-            .height = 125.f,
-            .size = UI_SIZE_FULL,
-            .padding = vec4_zero(),
-            .gap = vec2_new(32,12),
-            .margin = vec4_zero(),
-        };
-        UI_Element c0 = ui_create_container(style, r);
-        EntityID container0 = newEntity(scene); // 95
-        ADD_COMPONENT(scene, container0, UI_Element, &c0);
-        ADD_COMPONENT(scene, container0, Transform2D, &containerTransform);
-        ecs_move_entity(scene, container, container0);
-        if(i != 2) continue;
-        for (u8 j = 0; j < 3; j++)
-        {
-            UI_Style style1 = {
-                .background.color = vec4_new(.8, .2, .2, 1),
-                .background.hoverColor = vec4_new(.9, .9, .9, 1),
-                .width = 250.f,
-                .height = 125.f,
-                .size = UI_SIZE_FULL,
-                .padding = vec4_new(24, 24, 24, 24),
-                .margin = vec4_zero()
-            };
-            UI_Element c1 = ui_create_container(style1, r);
-            EntityID container1 = newEntity(scene); // 95
-            ADD_COMPONENT(scene, container1, UI_Element, &c1);
-            ADD_COMPONENT(scene, container1, Transform2D, &containerTransform);
-            ecs_move_entity(scene, container0, container1);
-        }
-    }
-
+    
+    ui_canvas_padding(vec4_new(12, 12, 12, 12));
     // ADD_COMPONENT(scene, container0, CharacterController, &controller);
 }
 
