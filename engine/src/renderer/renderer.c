@@ -94,9 +94,12 @@ void renderer_shutdown(GameState* gState)
 
 void renderer_draw(GameState* gState)
 {
+    renderContext_signalNewFrameForDebugger();
+    
     if(gState->platform.display.shouldClose) return;
     Renderer* r = &gState->renderer;
     PlatformState* p = &gState->platform;
+
 
     vkWaitForFences(r->context->device, 1, &r->sync.inFlightFences[r->currentFrame], VK_TRUE, U64_MAX);
     
@@ -135,7 +138,8 @@ void renderer_draw(GameState* gState)
         .signalSemaphoreCount = 1,
         .pSignalSemaphores = signalSemaphores};
 
-    if (vkQueueSubmit(r->context->queue.graphics, 1, &submitInfo, r->sync.inFlightFences[r->currentFrame]) != VK_SUCCESS)
+    res = vkQueueSubmit(r->context->queue.graphics, 1, &submitInfo, r->sync.inFlightFences[r->currentFrame]);
+    if (res != VK_SUCCESS)
     {
         LOG_FATAL("failed to submit draw command buffer!");
         return;
@@ -152,7 +156,7 @@ void renderer_draw(GameState* gState)
         .pImageIndices = &imageIndex,
         .pResults = 0};
 
-    res = vkQueuePresentKHR(r->context->queue.present, &presentInfo);
+    res = vkQueuePresentKHR(r->context->queue.graphics, &presentInfo);
     if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || r->framebufferResized)
     {
         r->framebufferResized = false;

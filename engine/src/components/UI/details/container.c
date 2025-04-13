@@ -2,8 +2,6 @@
 
 #include "meshTypes.h"
 
-#include "renderer/details/vertexBuffer.h"
-#include "renderer/details/indexBuffer.h"
 
 
 const u16 verticesCount = 4;
@@ -19,30 +17,17 @@ static const u32 ui_indices[] = {
     0,2,1, 2,0,3
 };
 
-UI_Element ui_create_container(UI_Style style, Renderer* r){
+UI_Element ui_create_container(UI_Style style){
     
-    UI_Element new = ui_create_element(style);
+    UI_Element new = ui_create_element(style, UI_ELEMENT_TYPE_CONTAINER);
 
-    new.renderer.indicesCount = indicesCount;
+    new.meshdata.verticesCount = verticesCount;
+    new.meshdata.vertices = malloc(sizeof(UI_Vertex) * verticesCount);
+    memcpy(new.meshdata.vertices, ui_vertices, sizeof(UI_Vertex) * verticesCount);
+    new.meshdata.indicesCount = indicesCount;
+    new.meshdata.indices = malloc(sizeof(u32) * indicesCount);
+    memcpy(new.meshdata.indices, ui_indices, sizeof(u32) * indicesCount);
+    new.state_is_dirty = true;
 
-    //TODO: reference a quad meshData instead
-    createVertexBuffer(
-        r->context->gpu,
-        r->context->device,
-        r->context->queue.graphics,
-        r->context->commandPool,
-        verticesCount, (void*)ui_vertices, sizeof(UI_Vertex),
-        &new.renderer.vertexBuffer,
-        &new.renderer.vertexBufferMemory
-    );
-    createIndexBuffer(
-        r->context->gpu,
-        r->context->device,
-        r->context->queue.graphics,
-        r->context->commandPool,
-        indicesCount, ui_indices,
-        &new.renderer.indexBuffer,
-        &new.renderer.indexBufferMemory
-    );
     return new;
 }

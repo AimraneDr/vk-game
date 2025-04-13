@@ -260,34 +260,38 @@ static void open_element(EntityID elem)
 
     switch (current_pass)
     {
-        case UI_PASS_SIZE_CORRECTION:{
-            ELEM_STATE(current)->final.sizeing = current->style.size;
-            break;
-        }
-        case UI_PASS_SIZES:{
-            ELEM_STATE(current)->remaining_children = ELEM_STATE(current)->children_count;
-            ELEM_STATE(current)->final.width = current->style.padding.left + current->style.padding.right;
-            ELEM_STATE(current)->final.height = current->style.padding.top + current->style.padding.bottom;
-            calculateElementSizing_oppening(current, parent);
-            break;
-        }
-        case UI_PASS_FULL_SIZES:
-        {
-            calculateElementFullSizing(current, parent);
-            break;
-        }
-        case UI_PASS_POSITIONS:
-        {
-            // initial advancement for the current element
-            ELEM_STATE(current)->cursor = vec2_new(current->style.padding.left, current->style.padding.top);
-            // advance the parent/canvas cursor
-            Vec2* cursor = parent ? &ELEM_STATE(parent)->cursor : &canvas.cursor; 
-            *cursor = vec2_add(*cursor, vec2_new(current->style.margin.left, current->style.margin.top));
-            
-            Transform2D *transform = GET_COMPONENT(0, current->id, Transform2D);
-            calculateElementPosition(current, transform, parent);
-            break;
-        }
+    case UI_PASS_SIZE_CORRECTION:
+    {
+        ELEM_STATE(current)->final.sizeing = current->style.size;
+        break;
+    }
+    case UI_PASS_SIZES:
+    {
+        ELEM_STATE(current)->remaining_children = ELEM_STATE(current)->children_count;
+        ELEM_STATE(current)->final.width = current->style.padding.left + current->style.padding.right;
+        ELEM_STATE(current)->final.height = current->style.padding.top + current->style.padding.bottom;
+        calculateElementSizing_oppening(current, parent);
+        break;
+    }
+    case UI_PASS_FULL_SIZES:
+    {
+        calculateElementFullSizing(current, parent);
+        break;
+    }
+    case UI_PASS_POSITIONS:
+    {
+        // initial advancement for the current element
+        ELEM_STATE(current)->cursor = vec2_new(current->style.padding.left, current->style.padding.top);
+        // advance the parent/canvas cursor
+        Vec2 *cursor = parent ? &ELEM_STATE(parent)->cursor : &canvas.cursor;
+        *cursor = vec2_add(*cursor, vec2_new(current->style.margin.left, current->style.margin.top));
+
+        Transform2D *transform = GET_COMPONENT(0, current->id, Transform2D);
+        calculateElementPosition(current, transform, parent);
+        break;
+    }
+    default:
+        break;
     }
 }
 
@@ -308,28 +312,29 @@ static void close_element()
     //
     switch (current_pass)
     {
-        case UI_PASS_SIZE_CORRECTION:
-            correctElementParentSizing(current, parent);
-            break;
-        case UI_PASS_SIZES:
-            calculateElementSizing_closer(current, parent);
-            break;
-        case UI_PASS_FULL_SIZES:
-        case UI_PASS_POSITIONS:
-            //No actions needed
-            break;
+    case UI_PASS_SIZE_CORRECTION:
+        correctElementParentSizing(current, parent);
+        break;
+    case UI_PASS_SIZES:
+        calculateElementSizing_closer(current, parent);
+        break;
+    case UI_PASS_FULL_SIZES:
+    case UI_PASS_POSITIONS:
+        // No actions needed
+        break;
     }
 }
 
 void correctElementParentSizing(UI_Element *elem, UI_Element *parent)
 {
-    UISize* parent_sizing = parent ? &ELEM_STATE(parent)->final.sizeing : &canvas.sizeing;
+    UISize *parent_sizing = parent ? &ELEM_STATE(parent)->final.sizeing : &canvas.sizeing;
 
-        if (ELEM_STATE(elem)->final.sizeing == UI_SIZE_FULL && *parent_sizing == UI_SIZE_FIT)
-        {
-            *parent_sizing = UI_SIZE_FULL;
-            if(!parent) canvas.remainingSize = canvas.size;
-        }
+    if (ELEM_STATE(elem)->final.sizeing == UI_SIZE_FULL && *parent_sizing == UI_SIZE_FIT)
+    {
+        *parent_sizing = UI_SIZE_FULL;
+        if (!parent)
+            canvas.remainingSize = canvas.size;
+    }
 }
 
 void calculateElementSizing_oppening(UI_Element *elem, UI_Element *parent)
@@ -343,6 +348,11 @@ void calculateElementSizing_oppening(UI_Element *elem, UI_Element *parent)
             ELEM_STATE(parent)->remaining_children -= 1;
         else
             canvas.remainingChildren -= 1;
+
+        if(elem->type == UI_ELEMENT_TYPE_TEXT){
+            ELEM_STATE(elem)->final.width += (elem->style.width);
+            ELEM_STATE(elem)->final.height += (elem->style.height);
+        }
     }
     break;
     case UI_SIZE_WIDTH_HEIGHT:

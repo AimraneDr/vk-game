@@ -19,6 +19,8 @@
 
 #include "systems/ui.h"
 
+#include "core/files.h"
+
 void config(GameConfig* config){
     config->platform.display.h = 500;
     config->platform.display.w = 750;
@@ -64,6 +66,7 @@ void start(GameState* state){
     load_asset("./../resources/textures/viking_room.png", "viking_room");
     load_asset("./../resources/models/viking_room.obj", "viking_room");
     load_asset("./../resources/models/plane.obj", "plane");
+    load_asset("./../resources/fonts/f1.fnt", "f1");
 
     MeshRenderer viking_mesh,plane, plane0;
     createMeshRenderer("viking_room", &viking_mesh);

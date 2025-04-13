@@ -4,9 +4,10 @@
 #include "engine_defines.h"
 #include "components/UI/ui_types.h"
 #include "components/UI/details/container.h"
+#include "components/UI/details/text.h"
 #include <math/mathTypes.h>
 
-API UI_Element ui_create_element(UI_Style s);
+API UI_Element ui_create_element(UI_Style s, UI_Element_Type type);
 API void ui_destroy_element(UI_Element* e, Renderer* r);
 
 ///////////////////////

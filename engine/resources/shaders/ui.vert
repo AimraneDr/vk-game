@@ -9,6 +9,8 @@ layout(binding = 1) uniform elemeentUBO {
     vec4 borderColor;
     vec2 size;
     float borderWidth;
+    uint FontID;
+    uint is_text;
 } elemeent;
 
 layout(push_constant) uniform PushConstant{
@@ -22,7 +24,11 @@ layout(location = 0) out vec4 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
 
 void main() {
-    vec2 newPos = inPosition * elemeent.size;
+    vec2 newPos;
+    if(elemeent.is_text != 0) 
+        newPos = inPosition;
+    else newPos = inPosition * elemeent.size;
+
     gl_Position = ubo.proj * pc.model * vec4(newPos, 1.0, 1.0);
     fragColor = vec4(1.f);
     fragTexCoord = inCoord;

@@ -13,6 +13,8 @@ typedef struct FileHandle_t
     char *content;
     u32 size;
     u32 cursor;
+    u32 line_count;
+    u32 max_line_size;
 } FileHandle;
 
 /// @brief load the file into memory
