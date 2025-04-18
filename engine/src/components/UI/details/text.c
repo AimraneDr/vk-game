@@ -2,9 +2,13 @@
 
 #include "assets/asset_manager.h"
 #include "components/UI/uiComponents.h"
+#include "assets/loaders/font_loader.h"
+#include "core/debugger.h"
+#include <Collections/DynamicArray.h>
 #include <string/str.h>
 #include <math/vec2.h>
 #include <math/mathUtils.h>
+
 
 UI_Element ui_create_text(UI_Style style, const char* text){
     UI_Element new = ui_create_element(style, UI_ELEMENT_TYPE_TEXT);
@@ -22,7 +26,14 @@ void ui_set_text(UI_Element* elem, const char* text){
     }
 
     Font* font = get_asset(elem->style.text.fontName, ASSET_TYPE_FONT)->data;
-    f32 scale = elem->style.text.size / MAX((f32)1, font->size);
+    GlyphSet* set = get_glyphset(font, elem->style.text.size);
+    if (!set)
+    {
+        LOG_ERROR("UI_renderer : font is not loaded");
+        return;
+    }
+    //TODO: use a default font if the font is not loaded or scale the font to the size of the text
+
     Vec2 cursor = vec2_new(elem->style.padding.left, elem->style.padding.top); //TODO: use right for rtl languages
     u32 vertexCount = 4 * elem->properties.text.len;
     UI_Vertex* vertices = malloc(sizeof(Vertex) * vertexCount);
@@ -32,14 +43,14 @@ void ui_set_text(UI_Element* elem, const char* text){
     f32 totalWidth = 0.f;
     f32 maxHeight = 0.f;
     for (u32 i = 0; i < elem->properties.text.len; i++) {
-        Glyph glyph = font->glyphs[elem->properties.text.val[i]]; // Look up glyph from your parsed data
-    
+        Glyph glyph = set->glyphs[elem->properties.text.val[i]]; // Look up glyph from your parsed data
+        load_char(font, elem->properties.text.val[i], elem->style.text.size);
         // Calculate quad position (screen-space)
-        f32 x = cursor.x + glyph.offset.x * scale;
-        f32 y = cursor.y + glyph.offset.y * scale;
-        f32 w = glyph.width * scale;
-        f32 h = glyph.height * scale;
-        f32 advance = glyph.advance * scale;
+        f32 x = cursor.x + glyph.offset.x;
+        f32 y = cursor.y + glyph.offset.y;
+        f32 w = glyph.width;
+        f32 h = glyph.height;
+        f32 advance = glyph.advance;
     
         // Define quad vertices (positions and UVs)
         //aply font size

@@ -7,8 +7,8 @@ OBJ_DIR = obj
 LIBS_DIR = C:\Users\aimra\Dev\libs
 
 DEFINES = -D_DEBUG
-INCLUDE_PATH = -Iinclude -IC:/Users/aimra/Dev/c-toolbox/include -IC:\VulkanSDK\1.3.290.0\Include -I$(LIBS_DIR)
-LINKER_FLAGS = -L$(LIBS_DIR)  -lvulkan-1 -ltoolbox -luser32 -lgdi32
+INCLUDE_PATH = -Iinclude -IC:/Users/aimra/Dev/c-toolbox/include -IC:/Users/aimra/Dev/libs/freetype-2.3.5/include -IC:/Users/aimra/Dev/libs/freetype-2.3.5/include/freetype2 -IC:\VulkanSDK\1.3.290.0\Include -I$(LIBS_DIR)
+LINKER_FLAGS = -L$(LIBS_DIR)  -lvulkan-1 -ltoolbox -luser32 -lgdi32 -l./freetype-2.3.5/lib/freetype
 
 SRC := $(shell dir /b /s src\*.c)
 SRC := $(subst \,/,$(SRC))

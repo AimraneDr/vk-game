@@ -97,7 +97,7 @@ void start(void *_state, void *gState)
         .size = UI_SIZE_FIT,
         .text = {
             .fontName = "f1",
-            .size = 48.f,
+            .size = 32.f,
         }
     };
 

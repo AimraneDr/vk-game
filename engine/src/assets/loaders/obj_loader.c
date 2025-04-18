@@ -12,7 +12,7 @@
 
 //TODO: write my own loader to reduce dependency and to remove compiler warning 
 #define TINYOBJ_LOADER_C_IMPLEMENTATION
-#include <TinyObjLoader/tiny_obj_loader_c.h>
+#include <tiny_obj_loader_c.h>
 
 // Hash function for vertex data
 static u32 hash_vertex(const Vertex* vertex) {
@@ -112,7 +112,7 @@ static void obj_file_reader(void* ctx, const char* filename, int is_mtl,
     free(file);
 }
 
-Asset load_obj(const char* path) {
+Asset load_obj(const char* path, void* _) {
     Asset asset = {0};
     asset.type = ASSET_TYPE_MODEL;
     asset.name = str_new(path);
