@@ -7,9 +7,10 @@
 
 #include <string/str.h>
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
+#include <stb_image.h>
 
-Asset load_texture(const char* path, u32 index){
+Asset load_texture(const char* path, void* index_ptr){
+    u32 index = *(u32*)index_ptr;
     i32 texWidth, texHeight, texChannels;
     // name = "./../resources/textures/viking_room.png";
     stbi_uc* pixels = stbi_load(path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);

@@ -90,7 +90,8 @@ void game_init(GameConfig config, GameState* out){
     
     input_system_init(&out->inputer);
     asset_manager_init();
-    
+    asset_manager_load_default_loaders();
+
     out->camera.viewRect = vec2i_new(out->platform.display.width,out->platform.display.height);
     //ecs
     ecs_init(out);

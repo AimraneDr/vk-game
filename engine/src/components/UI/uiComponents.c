@@ -26,9 +26,9 @@ void ui_canvas_flush()
 }
 
 
-UI_Element ui_create_element(UI_Style s)
+UI_Element ui_create_element(UI_Style s, UI_Element_Type type)
 {
-    UI_Element new = {0};
+    UI_Element new = {.type = type};
     new.style = s;
     new.hovered = false;
     return new;
@@ -36,18 +36,5 @@ UI_Element ui_create_element(UI_Style s)
 
 void ui_destroy_element(UI_Element *e, Renderer *r)
 {
-    // free mem if allocated
-    if (e->renderer.indicesCount != 0)
-    {
-        vkDeviceWaitIdle(r->context->device);
-        e->renderer.indicesCount = 0;
-        if (e->renderer.vertexBuffer != 0)
-            vkDestroyBuffer(r->context->device, e->renderer.vertexBuffer, 0);
-        if (e->renderer.vertexBufferMemory != 0)
-            vkFreeMemory(r->context->device, e->renderer.vertexBufferMemory, 0);
-        if (e->renderer.indexBuffer != 0)
-            vkDestroyBuffer(r->context->device, e->renderer.indexBuffer, 0);
-        if (e->renderer.indexBufferMemory != 0)
-            vkFreeMemory(r->context->device, e->renderer.indexBufferMemory, 0);
-    }
+
 }

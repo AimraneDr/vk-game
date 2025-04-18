@@ -8,6 +8,21 @@
 #include "ecs/ecs_types.h"
 #include "game.h"
 
+typedef enum UI_Element_Type_e{
+    UI_ELEMENT_TYPE_NONE,
+    UI_ELEMENT_TYPE_BUTTON,
+    UI_ELEMENT_TYPE_TEXT,
+    UI_ELEMENT_TYPE_CANVAS,
+    UI_ELEMENT_TYPE_CONTAINER,
+    UI_ELEMENT_TYPE_SPRITE,
+    UI_ELEMENT_TYPE_INPUT_FIELD,
+    UI_ELEMENT_TYPE_SLIDER,
+    UI_ELEMENT_TYPE_CHECKBOX,
+    UI_ELEMENT_TYPE_DROPDOWN,
+    UI_ELEMENT_TYPE_PROGRESS_BAR,
+    UI_ELEMENT_TYPE_SCROLLBAR,
+    UI_ELEMENT_TYPE_LISTBOX,
+}UI_Element_Type;
 
 typedef enum UI_Element_Size_Mode_e{
     UI_SIZE_UNIT_POINT,
@@ -16,8 +31,8 @@ typedef enum UI_Element_Size_Mode_e{
 }UISizeUnit;
 
 typedef enum UI_Element_Size_e{
+    UI_SIZE_FIT = 0,
     UI_SIZE_WIDTH_HEIGHT,
-    UI_SIZE_FIT,
     UI_SIZE_FULL
 }UISize;
 
@@ -73,26 +88,28 @@ typedef struct UI_Style_t {
     Vec4 activeColor;   // Color when clicked
 } UI_Style;
 
-#define ACTION_CALLBACK_PTR(name) void (*name)(GameState* state, EntityID e, struct UI_Element_t* elem)
+typedef struct UI_Properties_t{
+    String text;
+    Font* font;
+}UI_Properties;
+
+
+#define ACTION_CALLBACK_PTR(name)   void (*name)(GameState* state, EntityID e, struct UI_Element_t* elem)
 #define ACTION_CALLBACK(name) void name(GameState* state, EntityID e, struct UI_Element_t* elem)
 
+typedef struct ElementMeshData{
+    u32* indices;
+    u32 indicesCount;
+    UI_Vertex* vertices;
+    u32 verticesCount;
+}ElementMeshData;
+
 typedef struct UI_Element_t{
+    const UI_Element_Type type;
     EntityID id;
     UI_Style style;
-    u32 order;             // Render order priority
-
-    
-
-    //TODO: move or change
-    struct{
-        VkBuffer vertexBuffer;
-        VkDeviceMemory vertexBufferMemory;
-        VkBuffer indexBuffer;
-        VkDeviceMemory indexBufferMemory;
-        u32 indicesCount;
-        bool needsUpdate;  
-    }renderer;
-
+    UI_Properties properties;
+        
     //event callbacks
     struct{
         ACTION_CALLBACK_PTR(onMouseEnter);
@@ -112,10 +129,13 @@ typedef struct UI_Element_t{
         bool B0clicked;
         bool B1clicked;
     }mouse_state;
-
+    
     bool hovered;
-
+    
     void* state;
+    bool state_is_dirty;
+    //this containes the new state of the element, once updated it is reset
+    ElementMeshData meshdata;
     void* internal;
 } UI_Element;
 

@@ -6,3 +6,6 @@
 RendererContext* getRendererContext();
 RendererContext* createRendererContext(PlatformState* state);
 void destroyRendererContext();
+
+/// @brief tell the validation layer debugger that a new frame is being rendered
+void renderContext_signalNewFrameForDebugger();

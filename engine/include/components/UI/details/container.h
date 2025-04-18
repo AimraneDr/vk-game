@@ -4,6 +4,8 @@
 #include "engine_defines.h"
 #include "components/UI/ui_types.h"
 
-API UI_Element ui_create_container(UI_Style style, Renderer* r);
+
+//TODO: remove renderer form the params
+API UI_Element ui_create_container(UI_Style style);
 
 #endif //UI_DETAILS_CONTAINER_H

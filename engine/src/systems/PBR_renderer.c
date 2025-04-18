@@ -38,16 +38,16 @@ static void update_entity(void* _state, void* gState, EntityID e);
 static void destroy(void* _state, void* gState);
 static void destroy_entity(void* _state, void* gState, EntityID e);
 
-VkVertexInputBindingDescription _getVertexInputBindingDescription();
-void _getVertexInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDescription** outAttribDescs);
+static VkVertexInputBindingDescription _getVertexInputBindingDescription();
+static void _getVertexInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDescription** outAttribDescs);
 
-void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out);
-void createDescriptorPool(VkDevice device, VkDescriptorPool* out);
-void updateUBOsDescriptorSets(VkDevice device, VkBuffer* globalUBOs, VkBuffer* elementUBOs, VkDeviceSize elementAlignmentSize, VkDescriptorSet* outDescriptorSets);
-void createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDescriptorPool pool, VkDescriptorSet* outDescriptorSets);
-void updateGlobalUniformBuffer(uint32_t currentImage, void** uniformBuffersMapped, f64 deltatime, Camera* camera);
-void updateElementUniformBuffer(void* uniformBufferMapped, Material* mtl, u32 alignIndex, VkDeviceSize alignedUboSize);
-void uploadMaterialTextures(VkDevice device, VkDescriptorSet* descriptorSet, Material* mtl);
+static void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out);
+static void createDescriptorPool(VkDevice device, VkDescriptorPool* out);
+static void updateUBOsDescriptorSets(VkDevice device, VkBuffer* globalUBOs, VkBuffer* elementUBOs, VkDeviceSize elementAlignmentSize, VkDescriptorSet* outDescriptorSets);
+static void createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDescriptorPool pool, VkDescriptorSet* outDescriptorSets);
+static void updateGlobalUniformBuffer(uint32_t currentImage, void** uniformBuffersMapped, f64 deltatime, Camera* camera);
+static void updateElementUniformBuffer(void* uniformBufferMapped, Material* mtl, u32 alignIndex, VkDeviceSize alignedUboSize);
+static void uploadMaterialTextures(VkDevice device, VkDescriptorSet* descriptorSet, Material* mtl);
 
 System PBR_renderer_get_system_ref(Scene* scene, Renderer* r, Camera* camera){
     PBR_renderer_InternalState* s = malloc(sizeof(PBR_renderer_InternalState));
@@ -122,14 +122,13 @@ static void pre_update(void* _state, void* gState){
 static void pre_update_entity(void* _state, void* gState, EntityID e){
     PBR_renderer_InternalState* state = _state;
     Renderer* r = &((GameState*)gState)->renderer;
-    Scene* scene = &((GameState*)gState)->scene;
 
-    MeshRenderer* m = GET_COMPONENT(scene, e, MeshRenderer);
+    MeshRenderer* m = GET_COMPONENT(0, e, MeshRenderer);
     uploadMaterialTextures(r->context->device, state->graphicsPipeline.descriptorSets, m->material);
 }
 
 static u32 elementCounter;
-void update(void* _state, void* gState){
+static void update(void* _state, void* gState){
     PBR_renderer_InternalState* state = _state;
     Renderer* r = &((GameState*)gState)->renderer;
     Camera* cam = &((GameState*)gState)->camera;
@@ -147,7 +146,7 @@ void update(void* _state, void* gState){
     elementCounter=0;
 }
 
-void update_entity(void* _state, void* gState, EntityID e){
+static void update_entity(void* _state, void* gState, EntityID e){
     PBR_renderer_InternalState* state = _state;
     Renderer* r = &((GameState*)gState)->renderer;
     Scene* scene = &((GameState*)gState)->scene;
@@ -186,7 +185,7 @@ void update_entity(void* _state, void* gState, EntityID e){
     vkCmdDrawIndexed(r->context->commandBuffers[r->currentFrame], mData->indicesCount, 1, 0, 0, 0);
 }
 
-void destroy(void* _state, void* gState){
+static void destroy(void* _state, void* gState){
     PBR_renderer_InternalState* state = _state;
     Renderer* r = &((GameState*)gState)->renderer;
 
@@ -200,7 +199,7 @@ void destroy(void* _state, void* gState){
     destroyDescriptorSetLayout(r->context->device, state->graphicsPipeline.descriptorSetLayout);
 }
 
-void destroy_entity(void* _state, void* gState, EntityID e){
+static void destroy_entity(void* _state, void* gState, EntityID e){
     MeshRenderer* m = GET_COMPONENT(&((GameState*)gState)->scene, e, MeshRenderer);
     destroyMeshRenderer(m);
 }
@@ -209,10 +208,10 @@ void destroy_entity(void* _state, void* gState, EntityID e){
 /////      INTERNAL     ///////
 ///////////////////////////////
 ///////////////////////////////
-#define samplersCount 1000
+#define samplersCount 500
 #define bindingsCount 3
 
-void addTextureToDescriptorSet(
+static void addTextureToDescriptorSet(
     VkDevice device,
     VkDescriptorSet* descriptorSet,
     Texture* texture
@@ -238,7 +237,7 @@ void addTextureToDescriptorSet(
     }
 }
 
-void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out){
+static void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out){
     VkDescriptorSetLayoutBinding uboLayoutBinding = {
         .binding = 0,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -281,7 +280,7 @@ void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout* out){
 }
 
 
-void createDescriptorPool(VkDevice device, VkDescriptorPool* out){
+static void createDescriptorPool(VkDevice device, VkDescriptorPool* out){
     VkDescriptorPoolSize poolSizes[bindingsCount] = {
         // global ubo
         {
@@ -314,7 +313,7 @@ void createDescriptorPool(VkDevice device, VkDescriptorPool* out){
     }
 }
 
-void updateUBOsDescriptorSets(VkDevice device, VkBuffer* globalUBOs, VkBuffer* elementUBOs, VkDeviceSize elementAlignmentSize, VkDescriptorSet* outDescriptorSets){
+static void updateUBOsDescriptorSets(VkDevice device, VkBuffer* globalUBOs, VkBuffer* elementUBOs, VkDeviceSize elementAlignmentSize, VkDescriptorSet* outDescriptorSets){
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         VkDescriptorBufferInfo globalBuffInfo = {
             .buffer = globalUBOs[i],
@@ -349,7 +348,7 @@ void updateUBOsDescriptorSets(VkDevice device, VkBuffer* globalUBOs, VkBuffer* e
         vkUpdateDescriptorSets(device, 2, descriptorWrites, 0, 0);
     }
 }
-void createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDescriptorPool pool, VkDescriptorSet* outDescriptorSets){
+static void createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDescriptorPool pool, VkDescriptorSet* outDescriptorSets){
     VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT];
     for(u8 i=0; i<MAX_FRAMES_IN_FLIGHT; i++){
         layouts[i] = setLayout;
@@ -370,7 +369,7 @@ void createDescriptorSets(VkDevice device, VkDescriptorSetLayout setLayout, VkDe
 }
 
 
-void updateGlobalUniformBuffer(uint32_t currentImage, void** uniformBuffersMapped, f64 deltatime, Camera* camera) {
+static void updateGlobalUniformBuffer(uint32_t currentImage, void** uniformBuffersMapped, f64 deltatime, Camera* camera) {
 
     camera_updateViewMat(camera);
     camera_updateProjectionMat(camera, vec2_new(camera->viewRect.x,camera->viewRect.y));
@@ -382,9 +381,9 @@ void updateGlobalUniformBuffer(uint32_t currentImage, void** uniformBuffersMappe
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
 
-//TODO: temp
+//REFACTOR: the 'loaded' array is used in both render systems (aka: in each pipeline) but represents the same state
 static bool loaded[samplersCount] = {0};
-void uploadMaterialTextures(VkDevice device, VkDescriptorSet* descriptorSet, Material* mtl) {
+static void uploadMaterialTextures(VkDevice device, VkDescriptorSet* descriptorSet, Material* mtl) {
     //upload material textures if not uploaded already
     if(!loaded[mtl->albedo->Idx]){
         addTextureToDescriptorSet(device, descriptorSet, mtl->albedo);
@@ -408,7 +407,7 @@ void uploadMaterialTextures(VkDevice device, VkDescriptorSet* descriptorSet, Mat
     }
 }
 
-void updateElementUniformBuffer(void* uniformBufferMapped, Material* mtl, u32 alignIndex, VkDeviceSize alignedUboSize) {
+static void updateElementUniformBuffer(void* uniformBufferMapped, Material* mtl, u32 alignIndex, VkDeviceSize alignedUboSize) {
     
     PBR_Material_UBO ubo = {
         .albedo_idx = mtl->albedo->Idx,
@@ -431,7 +430,7 @@ void updateElementUniformBuffer(void* uniformBufferMapped, Material* mtl, u32 al
     memcpy((void*)uniformBufferMapped+offset, &ubo, sizeof(ubo));
 }
 
-VkVertexInputBindingDescription _getVertexInputBindingDescription(){
+static VkVertexInputBindingDescription _getVertexInputBindingDescription(){
     return (VkVertexInputBindingDescription) {
         .binding = 0,
         .stride = sizeof(Vertex),
@@ -439,7 +438,7 @@ VkVertexInputBindingDescription _getVertexInputBindingDescription(){
     };
 }
 
-void _getVertexInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDescription** outAttribDescs){
+static void _getVertexInputAttributeDescriptions(u32* outCount, VkVertexInputAttributeDescription** outAttribDescs){
     *outCount = 3;
     *outAttribDescs = (VkVertexInputAttributeDescription*)malloc(sizeof(VkVertexInputAttributeDescription) * (*outCount));
     (*outAttribDescs)[0].binding = 0;

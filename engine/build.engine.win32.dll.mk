@@ -7,8 +7,8 @@ OBJ_DIR = obj
 LIBS_DIR = C:\Users\aimra\Dev\libs
 
 DEFINES = -D_DEBUG
-INCLUDE_PATH = -Iinclude -IC:/Users/aimra/Dev/c-toolbox/include -IC:\VulkanSDK\1.3.290.0\Include -I$(LIBS_DIR)
-LINKER_FLAGS = -L$(LIBS_DIR)  -lvulkan-1 -ltoolbox -luser32 -lgdi32
+INCLUDE_PATH = -Iinclude -IC:/Users/aimra/Dev/c-toolbox/include -I$(LIBS_DIR)/include/ -I$(LIBS_DIR)/include/freetype2/ -IC:\VulkanSDK\1.3.290.0\Include
+LINKER_FLAGS = -L$(LIBS_DIR) -lvulkan-1 -ltoolbox -luser32 -lgdi32 -lfreetype
 
 SRC := $(shell dir /b /s src\*.c)
 SRC := $(subst \,/,$(SRC))
@@ -44,7 +44,7 @@ install:
 
 $(OBJ_DIR)/%.o: ./src/%.c
 	@echo compiling $@...
-	@$(CC) $(CFLAGS) -c -o $@ $< $(INCLUDE_PATH) $(DEFINES) 
+	@$(CC) $(CFLAGS) -c -o $@ $< $(INCLUDE_PATH) $(DEFINES)
 
 clean:
 	@echo cleaning ...

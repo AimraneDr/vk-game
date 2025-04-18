@@ -42,6 +42,23 @@ FileHandle *file_load(const char *path)
     result->size = (u32)fileSize;
     result->cursor = 0;
 
+    //lines count
+    //max line size
+    result->line_count = result->size > 0 ? 1 : 0;
+    result->max_line_size = 0;
+    if(result->size > 0){
+        u32 current_line_size = 0;
+        for(u32 i=0; i < result->size; i++, current_line_size++){
+            if(content[i] == '\n'){
+                if(current_line_size > result->max_line_size){
+                    result->max_line_size = current_line_size;
+                }
+                current_line_size = 0;
+                result->line_count++;
+            }
+        }
+    }
+
     fclose(file);
     return result;
 }
@@ -106,6 +123,19 @@ String path_get_file_name(const char* path) {
     String name = str_slice(basename, 0, dot_idx);
     str_free(&basename);
     return name;
+}
+
+String path_get_file_dir(const char* path) {
+    String path_str = str_new(path);
+    if (path_str.len == 0) return path_str;
+
+    // Extract directory
+    size_t sep_idx = _find_last_separator(path_str);
+    if (sep_idx == -1) return EMPTY_STRING; // No directory
+
+    String dir = str_slice(path_str, 0, sep_idx + 1); // Include the separator
+    str_free(&path_str);
+    return dir;
 }
 
 String path_get_file_extension(const char* path) {

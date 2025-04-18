@@ -246,6 +246,8 @@ typedef struct UI_Element_UBO_t
     Vec4 borderColor;
     Vec2 size;
     f32 borderWidth;
+    u32 FontID;
+    u32 is_text;
 } UI_Element_UBO;
 
 typedef struct UI_PushConstant_t

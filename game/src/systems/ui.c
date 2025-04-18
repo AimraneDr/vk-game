@@ -90,12 +90,29 @@ void start(void *_state, void *gState)
         .gap = vec2_new(12, 12),
         .margin = vec4_zero(),
     };
-    UI_Element c = ui_create_container(containerStyle, r);
+    UI_Style textStyle = {
+        .background.color = vec4_new(1, 1, 1, 1),
+        .background.hoverColor = vec4_new(1, .1, .1, 1),
+        .padding = vec4_new(12, 12, 12, 12),
+        .size = UI_SIZE_FIT,
+        .text = {
+            .fontName = "f1",
+            .size = 32.f,
+        }
+    };
+
+    UI_Element c = ui_create_container(containerStyle);
     c.events.onMouseLDown = _onMouseDown;
     EntityID container = newEntity(scene); // 96
     ADD_COMPONENT(scene, container, UI_Element, &c);
     ADD_COMPONENT(scene, container, Transform2D, &containerTransform);
     
+    UI_Element text = ui_create_text(textStyle, "Aimrane Draou");
+    EntityID textE = newEntity(scene);
+    ADD_COMPONENT(scene, textE, UI_Element, &text);
+    ADD_COMPONENT(scene, textE, Transform2D, &containerTransform);
+
+    ecs_move_entity(0, container, textE);
     ui_canvas_padding(vec4_new(12, 12, 12, 12));
     // ADD_COMPONENT(scene, container0, CharacterController, &controller);
 }

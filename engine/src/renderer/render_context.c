@@ -14,10 +14,16 @@
 
 void renderer_createVulkanInstance(VkInstance *instance);
 void renderer_initDebugMessanger(VkInstance *instance, VkDebugUtilsMessengerEXT *out);
-VkDebugUtilsMessengerCreateInfoEXT getDebugMessangerCreateInfo();
+static VkValidationFeaturesEXT getValidationFeatures();
+static VkDebugUtilsMessengerCreateInfoEXT getDebugMessangerCreateInfo();
 void renderer_destroyDebugMessanger(VkInstance instance, VkDebugUtilsMessengerEXT messanger);
 
 static RendererContext* context = 0;
+static bool newFrame;
+
+void renderContext_signalNewFrameForDebugger(){
+    newFrame = true;
+}
 
 RendererContext *getRendererContext()
 {
@@ -83,7 +89,7 @@ void renderer_createVulkanInstance(VkInstance *instance)
     vkEnumerateInstanceExtensionProperties(0, &ext_count, 0);
 
     VkExtensionProperties *extensions = malloc(sizeof(VkExtensionProperties) * ext_count);
-    char **ext_names = (char **)malloc(sizeof(char *) * ext_count);
+    char **ext_names = (char **)malloc(sizeof(char *) * (ext_count));
     vkEnumerateInstanceExtensionProperties(0, &ext_count, extensions);
 
     for (u32 i = 0; i < ext_count; i++)
@@ -95,8 +101,8 @@ void renderer_createVulkanInstance(VkInstance *instance)
         LOG_TRACE("required ext : %s", ext_names[i]);
     }
 
+    //TODO: Enable GPU asssisted validation features
     VkDebugUtilsMessengerCreateInfoEXT debugMessangerInfo = getDebugMessangerCreateInfo();
-
     VkInstanceCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pApplicationInfo = &appInof,
@@ -127,6 +133,11 @@ VkBool32 debugMessangerCallBack(
     const VkDebugUtilsMessengerCallbackDataEXT *callBackData_ptr,
     void *userData_ptr)
 {
+    if(newFrame){
+        LOG_TRACE("new frame");
+        newFrame = false;
+    }
+
     switch (msgSeverity)
     {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
@@ -146,6 +157,23 @@ VkBool32 debugMessangerCallBack(
     return VK_TRUE;
 }
 
+static VkValidationFeaturesEXT getValidationFeatures(){
+    static VkValidationFeatureEnableEXT enables[] = {
+        VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
+        VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT // optional
+    };
+    
+    static VkValidationFeaturesEXT validationFeatures = {
+        .sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT,
+        .enabledValidationFeatureCount = sizeof(enables) / sizeof(VkValidationFeatureEnableEXT),
+        .pEnabledValidationFeatures = enables,
+        .disabledValidationFeatureCount = 0,
+        .pDisabledValidationFeatures = 0
+    };
+
+    return validationFeatures;
+}
+
 VkDebugUtilsMessengerCreateInfoEXT getDebugMessangerCreateInfo()
 {
     return (VkDebugUtilsMessengerCreateInfoEXT){
@@ -158,7 +186,8 @@ VkDebugUtilsMessengerCreateInfoEXT getDebugMessangerCreateInfo()
             VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT,
         .pfnUserCallback = debugMessangerCallBack,
-        .pUserData = 0};
+        .pUserData = 0
+    };
 }
 
 void renderer_initDebugMessanger(VkInstance *instance, VkDebugUtilsMessengerEXT *out)
