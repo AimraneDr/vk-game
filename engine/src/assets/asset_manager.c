@@ -153,10 +153,10 @@ void asset_manager_load_default_loaders()
 
     /*      Fonts      */
     AssetLoaderInterface font_loader = {
-        .init = 0,
+        .init = init_font_loader,
         .load = load_font,
         .unload = release_font,
-        .shutdown = 0,
+        .shutdown = shutdown_font_loader,
     };
     register_loader(font_loader, ASSET_TYPE_FONT);
 }
@@ -377,5 +377,11 @@ void asset_manager_shutdown()
             hashset *set = _state.assets[i];
             hashset_destroy(set);
         }
+
+        if (_state.loaders[i].shutdown)
+        {
+            _state.loaders[i].shutdown();
+        }
+        _state.loaders[i] = (AssetLoader){.type = ASSET_TYPE_NONE};
     }
 }

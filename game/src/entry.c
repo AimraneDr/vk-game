@@ -67,6 +67,7 @@ void start(GameState* state){
     load_asset("./../resources/models/viking_room.obj", "viking_room");
     load_asset("./../resources/models/plane.obj", "plane");
     load_asset("./../resources/fonts/f1.fnt", "f1");
+    load_asset("./../resources/fonts/DejaVuSans.ttf", "dejavu");
 
     MeshRenderer viking_mesh,plane, plane0;
     createMeshRenderer("viking_room", &viking_mesh);

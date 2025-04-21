@@ -96,7 +96,7 @@ void start(void *_state, void *gState)
         .padding = vec4_new(12, 12, 12, 12),
         .size = UI_SIZE_FIT,
         .text = {
-            .fontName = "f1",
+            .fontName = "dejavu",
             .size = 32.f,
         }
     };

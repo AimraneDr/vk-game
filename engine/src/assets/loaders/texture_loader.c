@@ -24,6 +24,7 @@ Asset load_texture(const char* path, void* index_ptr){
     tex->width = texWidth;
     tex->height = texHeight;
     tex->mipLevels = (u16)FLOOR(log2(MAX(texWidth, texHeight))) + 1;
+    tex->is_dirty = false;
     
     createTexture(pixels, tex);
     stbi_image_free(pixels);

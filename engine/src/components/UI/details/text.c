@@ -26,25 +26,28 @@ void ui_set_text(UI_Element* elem, const char* text){
     }
 
     Font* font = get_asset(elem->style.text.fontName, ASSET_TYPE_FONT)->data;
-    GlyphSet* set = get_glyphset(font, elem->style.text.size);
-    if (!set)
-    {
-        LOG_ERROR("UI_renderer : font is not loaded");
-        return;
-    }
-    //TODO: use a default font if the font is not loaded or scale the font to the size of the text
-
+    
     Vec2 cursor = vec2_new(elem->style.padding.left, elem->style.padding.top); //TODO: use right for rtl languages
     u32 vertexCount = 4 * elem->properties.text.len;
     UI_Vertex* vertices = malloc(sizeof(Vertex) * vertexCount);
     u32 indexCount = 6 * elem->properties.text.len;
     u32* indices = malloc(sizeof(u32) * indexCount);
-
+    
     f32 totalWidth = 0.f;
     f32 maxHeight = 0.f;
+    GlyphSet* set = 0;
+    
     for (u32 i = 0; i < elem->properties.text.len; i++) {
-        Glyph glyph = set->glyphs[elem->properties.text.val[i]]; // Look up glyph from your parsed data
         load_char(font, elem->properties.text.val[i], elem->style.text.size);
+        if(!set) set = get_glyphset(font, elem->style.text.size);
+        if (!set)
+        {
+            LOG_ERROR("UI_renderer : font is not loaded");
+            //TODO: use a default font if the font is not loaded or scale the font to the size of the text
+            return;
+        }
+        Glyph glyph = set->glyphs[elem->properties.text.val[i]]; // Look up glyph from your parsed data
+        
         // Calculate quad position (screen-space)
         f32 x = cursor.x + glyph.offset.x;
         f32 y = cursor.y + glyph.offset.y;

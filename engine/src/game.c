@@ -179,6 +179,7 @@ void game_run(GameInterface Interface){
 }
 
 void game_shutdown(GameState* state){
+    vkDeviceWaitIdle(state->renderer.context->device);
 
     asset_manager_shutdown();
     renderer_shutdown(state);

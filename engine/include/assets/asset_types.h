@@ -45,10 +45,12 @@ typedef struct Glyph_t{
 }Glyph;
 
 typedef struct GlyphSet_t{
+    u32 id;
     u32 glyph_count;
     f32 size;
     Glyph* glyphs;
     void* atlas;
+    void* __internal__;
 }GlyphSet;
 
 typedef struct Font_t{

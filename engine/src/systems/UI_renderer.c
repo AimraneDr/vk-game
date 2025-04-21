@@ -303,7 +303,8 @@ static void destroy_entity(void *_state, void *gState, EntityID e)
 /////      INTERNAL     ///////
 ///////////////////////////////
 ///////////////////////////////
-#define samplersCount 500
+
+#define samplersCount 100
 #define bindingsCount 3
 
 static void addTextureToDescriptorSet(
@@ -464,12 +465,11 @@ void uploadElementTextures(VkDevice device, VkDescriptorSet *descriptorSet, UI_E
             LOG_ERROR("UI_renderer : font is not loaded");
             return;
         }
-        if (!loaded[((Texture *)set->atlas)->Idx])
+        if (!loaded[((Texture *)set->atlas)->Idx] || ((Texture*)set->atlas)->is_dirty)
         {
-            {
+                ((Texture*)set->atlas)->is_dirty = false;
                 addTextureToDescriptorSet(device, descriptorSet, set->atlas);
                 loaded[((Texture *)set->atlas)->Idx] = true;
-            }
         }
     }
 }
@@ -496,9 +496,9 @@ void updateElementUniformBuffer(void *uniformBufferMapped, f64 deltatime, UI_Ele
     ubo.is_text = uiElement->type == UI_ELEMENT_TYPE_TEXT ? 1 : 0;
     if (ubo.is_text)
     {
-        String font = str_join_s(uiElement->style.text.fontName, "_atlas");
-        ubo.FontID = ((Texture *)get_asset(font.val, ASSET_TYPE_TEXTURE)->data)->Idx;
-        str_free(&font);
+        Font* font = get_asset(uiElement->style.text.fontName, ASSET_TYPE_FONT)->data;
+        u32 atlas_index = get_glyphset(font, uiElement->style.text.size)->id;
+        ubo.FontID = atlas_index;
     }
     else
     {

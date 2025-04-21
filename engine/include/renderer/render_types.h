@@ -49,6 +49,8 @@ typedef struct Texture_t
     VkSampler sampler;
     u32 width, height;
     u16 mipLevels;
+
+    bool is_dirty;
 } Texture;
 
 

@@ -23,5 +23,6 @@ void main() {
         outColor = ubo.color;
     }else{
         outColor = ubo.color * texture(samplers[nonuniformEXT(ubo.FontID)], fragTexCoord).r;
+        // outColor = vec4(1.0, 1.0, 1.0, 1.0);
     }
 }
